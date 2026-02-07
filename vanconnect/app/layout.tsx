@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VanConnect - Connect with UBC Students",
   description: "Find sustainable activities with fellow UBC students",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
