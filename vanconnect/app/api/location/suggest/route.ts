@@ -16,9 +16,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Group not found" }, { status: 404 });
     }
 
-    const location = await Location.findOne({
-      type: group.activity,
-    }).sort({ sustainabilityScore: -1 });
+    // Build a filter: match by activity type, and optionally by tags
+    const filter: Record<string, any> = { type: group.activity };
+
+    if (body.tags && Array.isArray(body.tags) && body.tags.length > 0) {
+      filter.tags = { $in: body.tags.map((t: string) => t.toLowerCase()) };
+    }
+
+    const location = await Location.findOne(filter).sort({
+      sustainabilityScore: -1,
+    });
 
     return NextResponse.json(location);
   } catch (err: any) {

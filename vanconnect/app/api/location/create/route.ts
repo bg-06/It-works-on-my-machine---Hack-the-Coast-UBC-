@@ -12,6 +12,10 @@ export async function POST(req: Request) {
     const location = await Location.create({
       name: body.name,
       type: body.type,
+      description: body.description || "",
+      address: body.address || "",
+      rating: body.rating ?? null,
+      tags: body.tags || [],
       sustainabilityScore: body.sustainabilityScore || 5,
       indoorOutdoor: body.indoorOutdoor || "both",
       images: body.images || [],
