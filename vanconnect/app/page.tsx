@@ -9,10 +9,9 @@ export default function Home() {
   const router = useRouter();
 
   const [mode, setMode] = useState<Mode>('login');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,8 +21,8 @@ export default function Home() {
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password.trim()) {
-      setError('Email and password are required.');
+    if (!username.trim() || !password.trim()) {
+      setError('Username and password are required.');
       return;
     }
 
@@ -39,19 +38,19 @@ export default function Home() {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ name: username, password }),
         });
         const data = await res.json();
 
         if (!res.ok) {
-          if (data.error === 'no_user') {
+          if (res.status === 404) {
             // No account – flip to register automatically
             setMode('register');
-            setError('No account found. Create one below — your email and password have been kept.');
+            setError('No account found with that username. Create one below — your details have been kept.');
             setLoading(false);
             return;
           }
-          setError(data.message || 'Login failed.');
+          setError(data.error || 'Login failed.');
           setLoading(false);
           return;
         }
@@ -63,12 +62,12 @@ export default function Home() {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name || undefined, email, password }),
+          body: JSON.stringify({ name: username, password }),
         });
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.message || 'Registration failed.');
+          setError(data.error || 'Registration failed.');
           setLoading(false);
           return;
         }
@@ -144,8 +143,8 @@ export default function Home() {
             </h2>
             <p className="text-[var(--muted)]">
               {mode === 'login'
-                ? 'Enter your email and password to sign in.'
-                : 'Fill in the details below to get started.'}
+                ? 'Enter your username and password to sign in.'
+                : 'Pick a username and password to get started.'}
             </p>
           </div>
 
@@ -157,44 +156,22 @@ export default function Home() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            {/* Name (only register) */}
-            {mode === 'register' && (
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-[var(--foreground)]">
-                  Display Name <span className="text-[var(--muted)]">(optional)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Jane Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
-                  />
-                  <div className="absolute right-3 top-3 text-[var(--muted)]">
-                    <span className="text-[20px]">👤</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Email */}
+            {/* Username */}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-[var(--foreground)]">
-                Student Email
+              <label htmlFor="username" className="text-sm font-medium text-[var(--foreground)]">
+                Username
               </label>
               <div className="relative">
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="name@student.ubc.ca"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="janedoe"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
                 />
                 <div className="absolute right-3 top-3 text-[var(--muted)]">
-                  <span className="text-[20px]">✉️</span>
+                  <span className="text-[20px]">👤</span>
                 </div>
               </div>
             </div>
