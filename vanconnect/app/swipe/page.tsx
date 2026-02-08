@@ -49,9 +49,14 @@ export default function SwipePage() {
     setDirection(decision === 'like' ? 'right' : 'left');
 
     setTimeout(async () => {
-      await swipe(currentLocation.id, decision);
+      const groupId = await swipe(currentLocation.id, decision);
       setSwiping(false);
       setDirection(null);
+
+      // If a match was found, redirect to the match celebration page
+      if (groupId) {
+        router.push(`/match?groupId=${groupId}`);
+      }
     }, 300);
   };
 

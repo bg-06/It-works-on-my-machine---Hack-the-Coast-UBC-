@@ -102,12 +102,12 @@ export function useSwipe() {
 
       let matchedGroupId: string | null = null;
 
-      if (uid && decision === 'like') {
+      if (userId && decision === 'like') {
         try {
           const res = await fetch('/api/match', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: uid }),
+            body: JSON.stringify({ userId }),
           });
           if (res.ok) {
             const data = await res.json();
