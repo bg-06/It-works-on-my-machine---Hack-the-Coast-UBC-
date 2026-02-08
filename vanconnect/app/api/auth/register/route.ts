@@ -3,40 +3,30 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import bcrypt from "bcrypt";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
-    const { name, email, password } = await req.json();
+    const body = await req.json();
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required." },
-        { status: 400 }
-      );
-    }
-
-    // Check if user already exists
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await User.findOne({ name: body.name });
     if (existing) {
-      return NextResponse.json(
-        { error: "exists", message: "An account with that email already exists." },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "User already exists" }, { status: 400 });
     }
+
+    const hashed = await bcrypt.hash(body.password, 10);
 
     const user = await User.create({
-      name: name || email.split("@")[0],
-      email: email.toLowerCase().trim(),
-      password,                        // plain text – hackathon mode 🏴‍☠️
+      name: body.name,
+      password: hashed,
     });
 
     return NextResponse.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
+      message: "User created",
+      userId: user._id,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
