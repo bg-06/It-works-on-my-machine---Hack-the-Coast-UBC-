@@ -9,15 +9,33 @@ export async function POST(req: Request) {
     await connectDB();
     const body = await req.json();
 
+    const activities = Array.isArray(body.activities)
+      ? body.activities.filter(Boolean)
+      : body.activity
+      ? [body.activity]
+      : [];
+
+    const availabilityDays = Array.isArray(body.availabilityDays)
+      ? body.availabilityDays.filter(Boolean)
+      : [];
+
+    const availabilityTimes = Array.isArray(body.availabilityTimes)
+      ? body.availabilityTimes.filter(Boolean)
+      : [];
+
     const pref = await Preference.findOneAndUpdate(
       { userId: body.userId },
       {
         userId: body.userId,
-        activity: body.activity,
-        energyLevel: body.energyLevel,
-        vibe: body.vibe,
-        indoorOutdoor: body.indoorOutdoor,
-        sustainability: body.sustainability,
+        activity: body.activity ?? activities[0] ?? 'study',
+        activities,
+        energyLevel: body.energyLevel ?? 'balanced',
+        vibe: body.vibe ?? body.energyLevel ?? 'balanced',
+        socialStyle: body.socialStyle ?? 'casual',
+        indoorOutdoor: body.indoorOutdoor ?? 'both',
+        sustainability: body.sustainability ?? 'low',
+        availabilityDays,
+        availabilityTimes,
       },
       { upsert: true, new: true }
     );

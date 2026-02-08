@@ -21,10 +21,14 @@ export interface UserPreferences {
 
   /* ---- legacy / back-compat (kept so other pages don't break) ---- */
   activity: string;
+  activities?: string[];
   vibe: string;
+  socialStyle?: string;
   indoorOutdoor: 'indoor' | 'outdoor' | 'both';
   availability: string[];
   sustainability: string[];
+  availabilityDays?: string[];
+  availabilityTimes?: string[];
 }
 
 export interface PersonCard {

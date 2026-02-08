@@ -21,18 +21,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Preferences not found" }, { status: 400 });
     }
 
-    // If user already has an active group, return it
-    const existing = await Group.findOne({
-      members: userId,
-      status: { $in: ["forming", "confirmed"] },
-    });
-    if (existing) {
-      return NextResponse.json({
-        message: "Already in group",
-        group: existing,
-        matchFound: Array.isArray(existing.members) && existing.members.length >= 2,
-      });
-    }
+    const availabilityDays = Array.isArray(myPref.availabilityDays)
+      ? myPref.availabilityDays.filter(Boolean)
+      : [];
+    const availabilityTimes = Array.isArray(myPref.availabilityTimes)
+      ? myPref.availabilityTimes.filter(Boolean)
+      : [];
+
+    const dayMatch =
+      availabilityDays.length > 0
+        ? [
+            {
+              $or: [
+                { availabilityDays: { $in: availabilityDays } },
+                { availabilityDays: { $exists: false } },
+                { availabilityDays: { $size: 0 } },
+              ],
+            },
+          ]
+        : [];
+    const timeMatch =
+      availabilityTimes.length > 0
+        ? [
+            {
+              $or: [
+                { availabilityTimes: { $in: availabilityTimes } },
+                { availabilityTimes: { $exists: false } },
+                { availabilityTimes: { $size: 0 } },
+              ],
+            },
+          ]
+        : [];
 
     // Rolling matching: find an open group with same preferences
     const openGroup = await Group.findOneAndUpdate(
@@ -47,6 +66,7 @@ export async function POST(req: Request) {
           { vibe: null },
           { vibe: "" },
         ],
+        ...(dayMatch.length || timeMatch.length ? { $and: [...dayMatch, ...timeMatch] } : {}),
       },
       {
         $addToSet: { members: userId },
@@ -56,8 +76,20 @@ export async function POST(req: Request) {
     );
 
     if (openGroup) {
+      let updated = false;
+      if ((!openGroup.availabilityDays || openGroup.availabilityDays.length === 0) && availabilityDays.length > 0) {
+        openGroup.availabilityDays = availabilityDays;
+        updated = true;
+      }
+      if ((!openGroup.availabilityTimes || openGroup.availabilityTimes.length === 0) && availabilityTimes.length > 0) {
+        openGroup.availabilityTimes = availabilityTimes;
+        updated = true;
+      }
       if (openGroup.members.length >= 3 && openGroup.status !== "confirmed") {
         openGroup.status = "confirmed";
+        updated = true;
+      }
+      if (updated) {
         await openGroup.save();
       }
 
@@ -73,6 +105,8 @@ export async function POST(req: Request) {
       members: [userId],
       activity: myPref.activity,
       vibe: myPref.vibe,
+      availabilityDays,
+      availabilityTimes,
       status: "forming",
     });
 

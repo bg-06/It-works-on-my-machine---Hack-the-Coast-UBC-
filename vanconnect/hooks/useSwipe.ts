@@ -3,7 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LocationCard, SwipeDecision } from '@/types';
 
-export function useSwipe() {
+const GOAL_TYPE_MAP: Record<string, string[]> = {
+  hiking: ['trail', 'outdoor', 'park'],
+  photography: ['park', 'outdoor', 'trail', 'cafe'],
+  social: ['social', 'cafe'],
+  study: ['study', 'cafe'],
+  fitness: ['trail', 'outdoor', 'park'],
+};
+
+export function useSwipe(goal?: string) {
+  const [allLocations, setAllLocations] = useState<LocationCard[]>([]);
   const [locations, setLocations] = useState<LocationCard[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -63,9 +72,9 @@ export function useSwipe() {
           images: l.images ?? [],
         }));
 
-        setLocations(mapped);
+        setAllLocations(mapped);
       } catch {
-        setLocations([]);
+        setAllLocations([]);
       } finally {
         setLoading(false);
       }
@@ -73,6 +82,26 @@ export function useSwipe() {
 
     fetchFeed();
   }, [userId]);
+
+  useEffect(() => {
+    const normalizedGoal = goal?.toLowerCase().trim();
+    if (!normalizedGoal) {
+      setLocations(allLocations);
+      setIndex(0);
+      return;
+    }
+    const allowed = GOAL_TYPE_MAP[normalizedGoal] ?? [];
+    if (allowed.length === 0) {
+      setLocations(allLocations);
+      setIndex(0);
+      return;
+    }
+    const filtered = allLocations.filter((loc) =>
+      allowed.includes((loc.type ?? '').toLowerCase())
+    );
+    setLocations(filtered);
+    setIndex(0);
+  }, [allLocations, goal]);
 
   const currentLocation = locations[index] ?? null;
   const hasMore = index < locations.length;

@@ -18,11 +18,35 @@ const TYPE_EMOJI: Record<string, string> = {
 export default function SwipePage() {
   const router = useRouter();
   const { checking } = useAuth();
-  const { currentLocation, hasMore, loading, swipe, liked } = useSwipe();
+  const [selectedGoal, setSelectedGoal] = useState('study');
+  const { currentLocation, hasMore, loading, swipe, liked } = useSwipe(selectedGoal);
   const [swiping, setSwiping] = useState(false);
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+
+  useEffect(() => {
+    const loadPrefGoal = async () => {
+      try {
+        const raw = localStorage.getItem('vc_user');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const userId = parsed.userId ?? parsed._id ?? parsed.id;
+        if (!userId) return;
+        const res = await fetch(`/api/preferences/get?userId=${userId}`);
+        if (!res.ok) return;
+        const pref = await res.json();
+        if (pref?.activity) {
+          const goal = String(pref.activity).toLowerCase();
+          const allowed = ['hiking', 'photography', 'social', 'study', 'fitness'];
+          if (allowed.includes(goal)) {
+            setSelectedGoal(goal);
+          }
+        }
+      } catch {}
+    };
+    loadPrefGoal();
+  }, []);
 
   useEffect(() => {
     setExpanded(false);
@@ -140,7 +164,27 @@ export default function SwipePage() {
           </button>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {['hiking', 'photography', 'social', 'study', 'fitness'].map((goal) => {
+            const active = selectedGoal === goal;
+            return (
+              <button
+                key={goal}
+                type="button"
+                onClick={() => setSelectedGoal(goal)}
+                className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                  active
+                    ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                    : 'border-[var(--border)] bg-[var(--card)] text-[var(--muted)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                {goal}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-6">
           <div className="flex min-h-[70vh] items-center justify-center">
             <div className="relative w-full max-w-2xl">
               {/* Card */}

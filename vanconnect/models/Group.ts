@@ -4,6 +4,8 @@ const GroupSchema = new mongoose.Schema({
   members: [String],              // userIds
   activity: String,
   vibe: String,
+  availabilityDays: [String],
+  availabilityTimes: [String],
 
   // Event info
   eventTime: Date,                // when activity happens

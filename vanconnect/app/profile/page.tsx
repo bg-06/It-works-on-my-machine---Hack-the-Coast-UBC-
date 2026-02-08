@@ -4,17 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 
 type PreferenceState = {
   activity: string;
+  activities: string[];
   energyLevel: string;
   vibe: string;
+  socialStyle: string;
   indoorOutdoor: string;
   sustainability: string;
+  availabilityDays: string[];
+  availabilityTimes: string[];
 };
-
-const ACTIVITY_OPTIONS = [
-  { value: 'study', label: 'Study' },
-  { value: 'sustainable', label: 'Sustainable spots' },
-  { value: 'outdoors', label: 'Outdoors' },
-];
 
 const ENERGY_OPTIONS = [
   { value: 'chill', label: 'Chill' },
@@ -30,6 +28,12 @@ const VIBE_OPTIONS = [
   { value: 'balanced', label: 'Balanced' },
 ];
 
+const SOCIAL_STYLE_OPTIONS = [
+  { value: 'quiet', label: 'Quiet / focused' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'social', label: 'Very social' },
+];
+
 const INDOOR_OUTDOOR_OPTIONS = [
   { value: 'indoor', label: 'Indoor' },
   { value: 'outdoor', label: 'Outdoor' },
@@ -43,6 +47,17 @@ const SUSTAINABILITY_OPTIONS = [
   { value: 'transit', label: 'Transit' },
   { value: 'biking', label: 'Biking' },
 ];
+
+const ACTIVITY_OPTIONS = [
+  { value: 'hiking', label: 'Hiking' },
+  { value: 'photography', label: 'Photography' },
+  { value: 'social', label: 'Social' },
+  { value: 'study', label: 'Study' },
+  { value: 'fitness', label: 'Fitness' },
+];
+
+const DAY_OPTIONS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const TIME_OPTIONS = ['Morning', 'Afternoon', 'Evening'];
 
 export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -60,10 +75,14 @@ export default function ProfilePage() {
 
   const [prefs, setPrefs] = useState<PreferenceState>({
     activity: 'study',
+    activities: ['study'],
     energyLevel: 'balanced',
     vibe: 'balanced',
+    socialStyle: 'casual',
     indoorOutdoor: 'both',
     sustainability: 'medium',
+    availabilityDays: [],
+    availabilityTimes: [],
   });
 
   useEffect(() => {
@@ -96,10 +115,14 @@ export default function ProfilePage() {
           if (pref) {
             setPrefs({
               activity: pref.activity ?? 'study',
+              activities: pref.activities ?? (pref.activity ? [pref.activity] : ['study']),
               energyLevel: pref.energyLevel ?? 'balanced',
               vibe: pref.vibe ?? 'balanced',
+              socialStyle: pref.socialStyle ?? 'casual',
               indoorOutdoor: pref.indoorOutdoor ?? 'both',
               sustainability: pref.sustainability ?? 'medium',
+              availabilityDays: pref.availabilityDays ?? [],
+              availabilityTimes: pref.availabilityTimes ?? [],
             });
           }
         }
@@ -185,10 +208,14 @@ export default function ProfilePage() {
         body: JSON.stringify({
           userId,
           activity: prefs.activity,
+          activities: prefs.activities,
           energyLevel: prefs.energyLevel,
           vibe: prefs.vibe,
+          socialStyle: prefs.socialStyle,
           indoorOutdoor: prefs.indoorOutdoor,
           sustainability: prefs.sustainability,
+          availabilityDays: prefs.availabilityDays,
+          availabilityTimes: prefs.availabilityTimes,
         }),
       });
 
@@ -315,17 +342,39 @@ export default function ProfilePage() {
             <form onSubmit={handlePreferencesSave} className="mt-6 flex flex-col gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Activity</label>
-                <select
-                  value={prefs.activity}
-                  onChange={(e) => setPrefs((prev) => ({ ...prev, activity: e.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
-                >
-                  {ACTIVITY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-wrap gap-2">
+                  {ACTIVITY_OPTIONS.map((option) => {
+                    const active = prefs.activities.includes(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setPrefs((prev) => ({
+                            ...prev,
+                            activities: active
+                              ? prev.activities.filter((a) => a !== option.value)
+                              : [...prev.activities, option.value],
+                            activity: active
+                              ? prev.activity === option.value
+                                ? prev.activities.filter((a) => a !== option.value)[0] ?? 'study'
+                                : prev.activity
+                              : prev.activity && prev.activities.includes(prev.activity)
+                                ? prev.activity
+                                : option.value,
+                          }))
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          active
+                            ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                            : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Energy level</label>
@@ -349,6 +398,20 @@ export default function ProfilePage() {
                   className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
                 >
                   {VIBE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Social style</label>
+                <select
+                  value={prefs.socialStyle}
+                  onChange={(e) => setPrefs((prev) => ({ ...prev, socialStyle: e.target.value }))}
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                >
+                  {SOCIAL_STYLE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -382,6 +445,64 @@ export default function ProfilePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Available days</label>
+                <div className="flex flex-wrap gap-2">
+                  {DAY_OPTIONS.map((day) => {
+                    const active = prefs.availabilityDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() =>
+                          setPrefs((prev) => ({
+                            ...prev,
+                            availabilityDays: active
+                              ? prev.availabilityDays.filter((d) => d !== day)
+                              : [...prev.availabilityDays, day],
+                          }))
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          active
+                            ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                            : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Preferred times</label>
+                <div className="flex flex-wrap gap-2">
+                  {TIME_OPTIONS.map((time) => {
+                    const active = prefs.availabilityTimes.includes(time);
+                    return (
+                      <button
+                        key={time}
+                        type="button"
+                        onClick={() =>
+                          setPrefs((prev) => ({
+                            ...prev,
+                            availabilityTimes: active
+                              ? prev.availabilityTimes.filter((t) => t !== time)
+                              : [...prev.availabilityTimes, time],
+                          }))
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          active
+                            ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                            : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                        }`}
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <button
                 type="submit"
