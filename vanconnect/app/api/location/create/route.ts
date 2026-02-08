@@ -11,9 +11,10 @@ export async function POST(req: Request) {
 
     const location = await Location.create({
       name: body.name,
-      type: body.type, // cafe / park / trail / study / social / outdoor
+      type: body.type,
       sustainabilityScore: body.sustainabilityScore || 5,
       indoorOutdoor: body.indoorOutdoor || "both",
+      images: body.images || [],
     });
 
     return NextResponse.json(location);
