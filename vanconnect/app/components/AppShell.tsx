@@ -81,8 +81,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className={hideToolbar ? 'min-h-screen' : 'toolbar-safe'}>
       {children}
       {!hideToolbar && (
-        <nav className="fixed left-1/2 bottom-[14vh] z-50 -translate-x-1/2">
-          <div className="w-[min(92vw,520px)] rounded-3xl border border-white/30 bg-white/15 px-3 py-2 shadow-[0_20px_60px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+        <nav className="fixed left-0 right-0 bottom-0 z-50 sm:left-1/2 sm:right-auto sm:bottom-[50px] sm:-translate-x-1/2">
+          <div className="w-full rounded-none border-t border-white/30 bg-white/15 px-3 py-2 shadow-[0_20px_60px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:w-[min(92vw,520px)] sm:rounded-3xl sm:border">
             <div className="flex items-center justify-between gap-1">
               {NAV_ITEMS.map((item) => {
                 const active = isActiveRoute(pathname, item);

@@ -44,11 +44,17 @@ body {
 }
 
 .toolbar-safe {
-  --toolbar-clearance: calc(14vh + 5.5rem);
+  --toolbar-clearance: 80px;
 }
 
 .toolbar-safe > .min-h-screen {
   padding-bottom: var(--toolbar-clearance);
+}
+
+@media (min-width: 640px) {
+  .toolbar-safe {
+    --toolbar-clearance: 120px;
+  }
 }
 
 
