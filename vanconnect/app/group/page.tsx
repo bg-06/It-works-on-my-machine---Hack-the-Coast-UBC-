@@ -22,6 +22,8 @@ const statusColor = (status?: string) => {
   switch (status) {
     case 'confirmed':
       return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    case 'scheduled':
+      return 'bg-blue-100 text-blue-700 border-blue-200';
     case 'completed':
       return 'bg-slate-100 text-slate-600 border-slate-200';
     case 'cancelled':
@@ -59,9 +61,13 @@ const formatTime = (input?: string | null) => {
 export default function GroupsSchedulePage() {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [eventTime, setEventTime] = useState('');
+  const [locationName, setLocationName] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
+  const loadGroups = async () => {
       try {
         const stored = localStorage.getItem('vc_user');
         const user = stored ? JSON.parse(stored) : null;
@@ -91,6 +97,7 @@ export default function GroupsSchedulePage() {
         }));
 
         setGroups(mapped);
+        setSelectedGroupId((prev) => prev || mapped[0]?.id || '');
       } catch (err) {
         console.error('Failed to load groups:', err);
       } finally {
@@ -98,8 +105,40 @@ export default function GroupsSchedulePage() {
       }
     };
 
-    load();
+  useEffect(() => {
+    loadGroups();
   }, []);
+
+  const openCreate = () => {
+    setEventTime('');
+    setLocationName('');
+    setShowCreate(true);
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGroupId || !eventTime) return;
+    setSavingEvent(true);
+    try {
+      const res = await fetch('/api/group/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupId: selectedGroupId,
+          eventTime,
+          locationName,
+        }),
+      });
+      if (res.ok) {
+        setShowCreate(false);
+        await loadGroups();
+      }
+    } catch (err) {
+      console.error('Failed to create event:', err);
+    } finally {
+      setSavingEvent(false);
+    }
+  };
 
   const buckets = useMemo<DayBucket[]>(() => {
     const map = new Map<string, DayBucket>();
@@ -134,7 +173,10 @@ export default function GroupsSchedulePage() {
             >
               Go to chat
             </Link>
-            <button className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white">
+            <button
+              onClick={openCreate}
+              className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"
+            >
               Create event
             </button>
           </div>
@@ -167,7 +209,9 @@ export default function GroupsSchedulePage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-base font-semibold">{group.activity}</h3>
+                            <h3 className="truncate text-base font-semibold">
+                              {group.locationName || `${group.activity} meetup`}
+                            </h3>
                             <span
                               className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusColor(
                                 group.status
@@ -176,9 +220,7 @@ export default function GroupsSchedulePage() {
                               {group.status ?? 'forming'}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-600">
-                            {group.locationName || 'Location to be announced'}
-                          </p>
+                          <p className="text-sm text-slate-600">{group.activity}</p>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-600">
                           <span>{group.members.length} members</span>
@@ -198,6 +240,67 @@ export default function GroupsSchedulePage() {
           )}
         </div>
       </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-2xl">
+            <h2 className="text-xl font-semibold">Create event</h2>
+            <p className="text-sm text-[var(--muted)] mt-1">Set time and location for a group.</p>
+            <form onSubmit={handleCreateEvent} className="mt-6 flex flex-col gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Group</label>
+                <select
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                >
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.activity}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date & time</label>
+                <input
+                  type="datetime-local"
+                  value={eventTime}
+                  onChange={(e) => setEventTime(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Location name</label>
+                <input
+                  type="text"
+                  value={locationName}
+                  onChange={(e) => setLocationName(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  placeholder="e.g., Koerner Library"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEvent}
+                  className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {savingEvent ? 'Saving…' : 'Save event'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

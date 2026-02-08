@@ -15,7 +15,7 @@ const GroupSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["forming", "confirmed", "completed", "cancelled"],
+    enum: ["forming", "confirmed", "scheduled", "completed", "cancelled"],
     default: "forming",
   },
 

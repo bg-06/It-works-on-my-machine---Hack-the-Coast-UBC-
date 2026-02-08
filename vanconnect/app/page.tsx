@@ -102,9 +102,15 @@ export default function Home() {
     <div className="flex min-h-screen w-full">
       {/* ---- Left hero panel (hidden on mobile) ---- */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Gradient background instead of image so it never breaks */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#056661] via-[#0a7a6e] to-[#1b7e57]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        {/* Photo background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage:
+              "url('https://images.trvl-media.com/place/507172/a91f7078-656e-40b4-b2c8-8d52942d488f.jpg')",
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full text-white">
           {/* Logo */}
@@ -113,7 +119,7 @@ export default function Home() {
           </div>
 
           {/* Headline */}
-          <div className="max-w-md">
+          <div className="max-w-md mt-auto mb-[50px]">
             <h1 className="text-4xl font-bold mb-4 leading-tight">
               Coordinate sustainably.<br />Connect locally.
             </h1>
