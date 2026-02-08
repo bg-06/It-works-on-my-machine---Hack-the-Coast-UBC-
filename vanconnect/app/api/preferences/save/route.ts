@@ -9,14 +9,18 @@ export async function POST(req: Request) {
     await connectDB();
     const body = await req.json();
 
-    const pref = await Preference.create({
-      userId: body.userId,
-      activity: body.activity,
-      energyLevel: body.energyLevel,
-      vibe: body.vibe,
-      indoorOutdoor: body.indoorOutdoor,
-      sustainability: body.sustainability,
-    });
+    const pref = await Preference.findOneAndUpdate(
+      { userId: body.userId },
+      {
+        userId: body.userId,
+        activity: body.activity,
+        energyLevel: body.energyLevel,
+        vibe: body.vibe,
+        indoorOutdoor: body.indoorOutdoor,
+        sustainability: body.sustainability,
+      },
+      { upsert: true, new: true }
+    );
 
     return NextResponse.json(pref);
   } catch (err: any) {

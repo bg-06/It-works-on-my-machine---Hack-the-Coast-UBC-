@@ -12,6 +12,8 @@ export async function POST(req: Request) {
 
     const user = await User.create({
       name: body.name,
+      email: body.email ?? "",
+      photoUrl: body.photoUrl ?? "",
       onboarded: false,
     });
 

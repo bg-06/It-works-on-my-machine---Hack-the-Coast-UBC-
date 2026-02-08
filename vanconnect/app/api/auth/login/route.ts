@@ -24,6 +24,8 @@ export async function POST(req: Request) {
       message: "Login success",
       userId: user._id,
       name: user.name,
+      email: user.email ?? "",
+      photoUrl: user.photoUrl ?? "",
       onboarded: user.onboarded ?? false,
     });
   } catch (err: any) {

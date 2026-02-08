@@ -19,6 +19,8 @@ export async function POST(req: Request) {
 
     const user = await User.create({
       name: body.name,
+      email: body.email ?? "",
+      photoUrl: body.photoUrl ?? "",
       password: hashed,
     });
 
@@ -26,6 +28,8 @@ export async function POST(req: Request) {
       message: "User created",
       userId: user._id,
       name: user.name,
+      email: user.email,
+      photoUrl: user.photoUrl,
       onboarded: false,
     });
   } catch (err: any) {

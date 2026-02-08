@@ -10,6 +10,7 @@ export default function Home() {
 
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -67,7 +68,7 @@ export default function Home() {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: username, password }),
+          body: JSON.stringify({ name: username, email, password }),
         });
         const data = await res.json();
 
@@ -92,6 +93,9 @@ export default function Home() {
     setMode(mode === 'login' ? 'register' : 'login');
     setError('');
     setConfirmPassword('');
+    if (mode === 'login') {
+      setEmail('');
+    }
   };
 
   return (
@@ -177,6 +181,28 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Email (register only) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-[var(--foreground)]">
+                  Email
+                </label>
+                <div className="relative">
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                  />
+                  <div className="absolute right-3 top-3 text-[var(--muted)]">
+                    <span className="text-[20px]">✉️</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Password */}
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium text-[var(--foreground)]">
@@ -201,7 +227,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Confirm password (only register) */}
+            {/* Confirm password (register only) */}
             {mode === 'register' && (
               <div className="space-y-2">
                 <label htmlFor="confirm" className="text-sm font-medium text-[var(--foreground)]">
