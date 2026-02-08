@@ -253,7 +253,7 @@ export default function ProfilePage() {
         </header>
 
         {(error || success) && (
-          <div className={`mt-6 rounded-xl border px-4 py-3 text-sm ${error ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+          <div className={`mt-6 rounded-xl border px-4 py-3 text-sm ${error ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'}`}>
             {error || success}
           </div>
         )}
@@ -280,7 +280,7 @@ export default function ProfilePage() {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                   placeholder="Your name"
                 />
               </div>
@@ -290,7 +290,7 @@ export default function ProfilePage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                   placeholder="you@email.com"
                 />
               </div>
@@ -299,7 +299,7 @@ export default function ProfilePage() {
                 <input
                   value={photoUrl}
                   onChange={(e) => setPhotoUrl(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                   placeholder="https://..."
                 />
               </div>
@@ -309,7 +309,7 @@ export default function ProfilePage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                   placeholder="Leave blank to keep current password"
                 />
               </div>
@@ -319,7 +319,7 @@ export default function ProfilePage() {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                   placeholder="Re-enter password"
                 />
               </div>
@@ -367,7 +367,7 @@ export default function ProfilePage() {
                         className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                           active
                             ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                            : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                            : 'border-[var(--border)] bg-[var(--card)] text-[var(--muted)]'
                         }`}
                       >
                         {option.label}
@@ -381,7 +381,7 @@ export default function ProfilePage() {
                 <select
                   value={prefs.energyLevel}
                   onChange={(e) => setPrefs((prev) => ({ ...prev, energyLevel: e.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                 >
                   {ENERGY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -395,7 +395,7 @@ export default function ProfilePage() {
                 <select
                   value={prefs.vibe}
                   onChange={(e) => setPrefs((prev) => ({ ...prev, vibe: e.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                 >
                   {VIBE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -409,7 +409,7 @@ export default function ProfilePage() {
                 <select
                   value={prefs.socialStyle}
                   onChange={(e) => setPrefs((prev) => ({ ...prev, socialStyle: e.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                 >
                   {SOCIAL_STYLE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -423,7 +423,7 @@ export default function ProfilePage() {
                 <select
                   value={prefs.indoorOutdoor}
                   onChange={(e) => setPrefs((prev) => ({ ...prev, indoorOutdoor: e.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                 >
                   {INDOOR_OUTDOOR_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -437,7 +437,7 @@ export default function ProfilePage() {
                 <select
                   value={prefs.sustainability}
                   onChange={(e) => setPrefs((prev) => ({ ...prev, sustainability: e.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm"
+                  className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)]"
                 >
                   {SUSTAINABILITY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -466,7 +466,7 @@ export default function ProfilePage() {
                         className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                           active
                             ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                            : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                            : 'border-[var(--border)] bg-[var(--card)] text-[var(--muted)]'
                         }`}
                       >
                         {day}
@@ -495,7 +495,7 @@ export default function ProfilePage() {
                         className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                           active
                             ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                            : 'border-[var(--border)] bg-white text-[var(--muted)]'
+                            : 'border-[var(--border)] bg-[var(--card)] text-[var(--muted)]'
                         }`}
                       >
                         {time}
@@ -507,7 +507,7 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={savingPrefs}
-                className="mt-2 h-11 rounded-full border border-[var(--border)] bg-white text-sm font-semibold text-[var(--primary)] disabled:opacity-50"
+                className="mt-2 h-11 rounded-full border border-[var(--border)] bg-[var(--card)] text-sm font-semibold text-[var(--primary)] disabled:opacity-50"
               >
                 {savingPrefs ? 'Saving…' : 'Save preferences'}
               </button>
