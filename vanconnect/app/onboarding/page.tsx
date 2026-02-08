@@ -2,188 +2,403 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPreferences } from '@/types';
+import { useSession } from 'next-auth/react';
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                         */
+/* ------------------------------------------------------------------ */
+
+const GOALS = [
+  {
+    value: 'study' as const,
+    label: 'Find Study Buddies',
+    desc: 'Connect with classmates in Vancouver libraries and campus hubs.',
+    icon: '📚',
+    bgColor: 'bg-teal-50',
+  },
+  {
+    value: 'sustainable' as const,
+    label: 'Explore Sustainable Spots',
+    desc: 'Discover eco-friendly cafés, shops, and zero-waste locations.',
+    icon: '♻️',
+    bgColor: 'bg-green-50',
+  },
+  {
+    value: 'outdoors' as const,
+    label: 'Join Outdoor Adventures',
+    desc: 'Find groups for hiking the North Shore or biking the Seawall.',
+    icon: '🏔️',
+    bgColor: 'bg-orange-50',
+  },
+];
+
+const TRANSPORTS = [
+  { value: 'transit' as const,  label: 'Skytrain / Bus', icon: '🚇' },
+  { value: 'biking' as const,   label: 'Biking',         icon: '🚲' },
+  { value: 'walking' as const,  label: 'Walking',        icon: '🚶' },
+  { value: 'carpool' as const,  label: 'Carpool',        icon: '🚗' },
+];
+
+const INTERESTS = [
+  { label: 'Coffee',        icon: '☕' },
+  { label: 'Hiking',        icon: '🥾' },
+  { label: 'Coding',        icon: '💻' },
+  { label: 'Photography',   icon: '📷' },
+  { label: 'Nightlife',     icon: '🌃' },
+  { label: 'Study Groups',  icon: '📖' },
+  { label: 'Music',         icon: '🎧' },
+  { label: 'Foodie',        icon: '🍜' },
+];
+
+type Goal      = (typeof GOALS)[number]['value'];
+type Transport = (typeof TRANSPORTS)[number]['value'];
+type Energy    = 'chill' | 'balanced' | 'active';
+
+const ENERGY_MAP: Record<number, Energy> = { 0: 'chill', 1: 'balanced', 2: 'active' };
+const ENERGY_LABELS = [
+  { label: 'Chill 😌',     pos: 'text-left' },
+  { label: 'Balanced 🧘',  pos: 'text-center' },
+  { label: 'Active 🏃',    pos: 'text-right' },
+];
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                              */
+/* ------------------------------------------------------------------ */
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userName = session?.user?.name?.split(' ')[0] ?? 'there';
+  const userPhoto = session?.user?.image ?? '';
+
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<UserPreferences>({
-    activity: '',
-    vibe: '',
-    energy: '',
-    indoorOutdoor: 'both',
-    availability: [],
-    sustainability: [],
-  });
 
-  const activities = ['Coffee', 'Hiking', 'Study', 'Food', 'Sports', 'Arts', 'Gaming'];
-  const vibes = ['Chill', 'Adventurous', 'Focused', 'Social', 'Creative'];
-  const energyLevels = ['Low-key', 'Moderate', 'High-energy'];
-  const sustainabilityOptions = ['Public Transit', 'Bike-friendly', 'Zero-waste', 'Local businesses'];
+  // form state
+  const [goal, setGoal]           = useState<Goal | ''>('');
+  const [transport, setTransport] = useState<Transport | ''>('');
+  const [energyIdx, setEnergyIdx] = useState(1);
+  const [interests, setInterests] = useState<string[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const energy = ENERGY_MAP[energyIdx];
+
+  const toggleInterest = (label: string) =>
+    setInterests(prev =>
+      prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label],
+    );
+
+  const canAdvance =
+    (step === 1 && goal !== '') ||
+    (step === 2 && transport !== '') ||
+    (step === 3 && interests.length > 0);
+
+  const next = () => setStep(s => Math.min(s + 1, 3));
+  const back = () => setStep(s => Math.max(s - 1, 1));
+
+  /* ---- submit ---- */
+  const handleSubmit = async () => {
     setLoading(true);
-
     try {
+      const body = {
+        goal,
+        transport,
+        energy,
+        interests,
+        // map into legacy fields the backend still expects
+        activity:       goal,
+        vibe:           energy,
+        indoorOutdoor:  goal === 'outdoors' ? 'outdoor' as const : 'both' as const,
+        availability:   [] as string[],
+        sustainability: transport === 'transit' || transport === 'biking' ? [transport] : [] as string[],
+      };
       const res = await fetch('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
-
       if (res.ok) {
         router.push('/swipe');
       }
-    } catch (error) {
-      console.error('Failed to save preferences:', error);
+    } catch (err) {
+      console.error('Failed to save preferences:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleArrayItem = (field: 'availability' | 'sustainability', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].includes(value)
-        ? prev[field].filter(item => item !== value)
-        : [...prev[field], value],
-    }));
-  };
+  /* ---- progress ---- */
+  const pct = Math.round((step / 3) * 100);
 
+  /* ================================================================ */
+  /*  Render                                                          */
+  /* ================================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 p-4">
-      <div className="max-w-2xl mx-auto py-8">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Tell us about yourself</h1>
-          <p className="text-gray-600 mb-8">Help us find your perfect match!</p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Activity */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                What's your ideal activity?
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {activities.map(activity => (
-                  <button
-                    key={activity}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, activity }))}
-                    className={`py-2 px-4 rounded-lg font-medium transition-all ${
-                      formData.activity === activity
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {activity}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Vibe */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                What's your vibe?
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {vibes.map(vibe => (
-                  <button
-                    key={vibe}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, vibe }))}
-                    className={`py-2 px-4 rounded-lg font-medium transition-all ${
-                      formData.vibe === vibe
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {vibe}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Energy */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Energy level?
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {energyLevels.map(energy => (
-                  <button
-                    key={energy}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, energy }))}
-                    className={`py-2 px-4 rounded-lg font-medium transition-all ${
-                      formData.energy === energy
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {energy}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Indoor/Outdoor */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Indoor or Outdoor?
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['indoor', 'outdoor', 'both'] as const).map(option => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, indoorOutdoor: option }))}
-                    className={`py-2 px-4 rounded-lg font-medium transition-all capitalize ${
-                      formData.indoorOutdoor === option
-                        ? 'bg-purple-500 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sustainability */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Sustainability preferences (select all that apply)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {sustainabilityOptions.map(option => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => toggleArrayItem('sustainability', option)}
-                    className={`py-2 px-4 rounded-lg font-medium transition-all ${
-                      formData.sustainability.includes(option)
-                        ? 'bg-green-500 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !formData.activity || !formData.vibe || !formData.energy}
-              className="w-full bg-purple-500 text-white font-bold py-4 px-6 rounded-lg hover:bg-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {loading ? 'Saving...' : 'Continue to Matching'}
-            </button>
-          </form>
+    <div className="min-h-screen bg-[var(--background)] flex flex-col">
+      {/* -------- Top Nav -------- */}
+      <header className="flex items-center justify-between px-6 md:px-10 py-4 bg-[rgb(12,18,16)]">
+        <div className="flex items-center gap-3">
+          {/* Maple-leaf icon */}
+          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17,8 C8,10 5.9,16.17 3.82,21.34 L5.71,22 L6.66,19.7 C7.14,19.87 7.64,20 8,20 C19,20 22,3 22,3 C21,5 14,5.25 9,6.25 C4,7.25 2,11.5 2,13.5 C2,15.5 3.75,17.25 3.75,17.25 C7,8 17,8 17,8 Z" />
+          </svg>
+          <span className="text-xl font-bold tracking-tight text-white">VanConnect</span>
         </div>
-      </div>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push('/swipe')}
+            className="text-sm font-medium text-white/70 hover:text-white transition-colors hidden sm:block"
+          >
+            Skip for now
+          </button>
+          {userPhoto ? (
+            <img
+              src={userPhoto}
+              alt="avatar"
+              className="w-10 h-10 rounded-full border-2 border-white/40 shadow-sm object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">
+              {userName.charAt(0)}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* -------- Main -------- */}
+      <main className="flex-1 flex flex-col items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-3xl flex flex-col gap-8">
+
+          {/* ===== STEP 1 ===== */}
+          {step === 1 && (
+            <>
+              <div className="flex flex-col gap-2 text-center md:text-left">
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+                  Welcome to VanConnect, {userName}!
+                </h1>
+                <p className="text-lg text-[var(--muted)] max-w-2xl">
+                  To personalise your experience, tell us what you&apos;re primarily looking for today.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {GOALS.map(g => {
+                  const selected = goal === g.value;
+                  return (
+                    <button
+                      key={g.value}
+                      onClick={() => setGoal(g.value)}
+                      className={`
+                        relative flex flex-col gap-4 p-6 rounded-xl border-2 text-left
+                        transition-all duration-200 cursor-pointer
+                        ${selected
+                          ? 'border-[var(--primary)] bg-teal-50/60 shadow-lg'
+                          : 'border-transparent bg-[var(--card)] shadow-sm hover:shadow-md hover:border-[var(--primary)]/40'
+                        }
+                      `}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className={`w-14 h-14 rounded-full ${g.bgColor} flex items-center justify-center text-2xl`}>
+                          {g.icon}
+                        </div>
+                        {selected && (
+                          <span className="text-[var(--primary)] text-xl">✓</span>
+                        )}
+                      </div>
+                      <h3 className="text-xl font-bold">{g.label}</h3>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed">{g.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* ===== STEP 2 ===== */}
+          {step === 2 && (
+            <div className="w-full max-w-2xl mx-auto bg-[var(--card)] rounded-xl shadow-sm border border-[var(--border)] overflow-hidden">
+              <div className="px-8 py-6 flex flex-col items-center text-center">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
+                  How do you usually get around?
+                </h1>
+                <p className="text-[var(--muted)] text-base md:text-lg leading-relaxed mb-8 max-w-lg">
+                  We&apos;ll use this to calculate your potential carbon savings and customise your dashboard.
+                </p>
+
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {TRANSPORTS.map(t => {
+                    const selected = transport === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        onClick={() => setTransport(t.value)}
+                        className={`
+                          relative p-6 flex flex-col items-center justify-center gap-3
+                          rounded-xl border-2 transition-all duration-200 cursor-pointer
+                          ${selected
+                            ? 'border-[var(--primary)] bg-teal-50/50'
+                            : 'border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-teal-50/30'
+                          }
+                        `}
+                      >
+                        <span className="text-4xl">{t.icon}</span>
+                        <span className="font-semibold text-lg">{t.label}</span>
+                        {selected && (
+                          <span className="absolute top-3 right-3 text-[var(--primary)] text-lg">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="w-full flex items-center gap-2 p-3 bg-green-50 rounded-lg mb-4">
+                  <span className="text-lg">🌱</span>
+                  <p className="text-sm font-medium text-green-800">
+                    Tip: Choosing transit helps us track your carbon savings!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== STEP 3 ===== */}
+          {step === 3 && (
+            <div className="w-full max-w-2xl mx-auto bg-[var(--card)] rounded-xl shadow-sm border border-[var(--border)] overflow-hidden">
+              <div className="px-8 py-6 flex flex-col items-center text-center">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
+                  What&apos;s your vibe?
+                </h1>
+                <p className="text-[var(--muted)] text-base md:text-lg leading-relaxed mb-8 max-w-lg">
+                  Help us find the right crowd for you in Vancouver.
+                </p>
+
+                {/* ---- Energy slider ---- */}
+                <div className="w-full bg-[var(--background)] rounded-xl p-6 mb-8 text-left">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold">Energy Level</h2>
+                    <span className="text-sm font-semibold px-3 py-1 rounded-full bg-teal-50 text-[var(--primary)] capitalize">
+                      {energy}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={1}
+                    value={energyIdx}
+                    onChange={e => setEnergyIdx(Number(e.target.value))}
+                    className="energy-slider w-full"
+                    style={{ '--val': `${energyIdx * 50}%` } as React.CSSProperties}
+                  />
+
+                  <div className="flex justify-between mt-2 text-sm text-[var(--muted)]">
+                    {ENERGY_LABELS.map((el, i) => (
+                      <span key={i} className={el.pos}>{el.label}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ---- Interests ---- */}
+                <div className="w-full text-left mb-6">
+                  <h2 className="text-lg font-bold mb-4">Interests</h2>
+                  <div className="flex flex-wrap gap-3">
+                    {INTERESTS.map(item => {
+                      const selected = interests.includes(item.label);
+                      return (
+                        <button
+                          key={item.label}
+                          onClick={() => toggleInterest(item.label)}
+                          className={`
+                            flex items-center gap-2 px-4 py-2 rounded-full border-2
+                            font-medium text-sm transition-all duration-150
+                            ${selected
+                              ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                              : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:border-[var(--primary)]/50'
+                            }
+                          `}
+                        >
+                          <span>{item.icon}</span>
+                          {item.label}
+                          {selected && <span>✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* -------- Footer / progress -------- */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-[var(--border)]">
+            {/* progress */}
+            <div className="flex flex-col gap-2 w-full md:w-64">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold uppercase tracking-wide text-[var(--primary)]">
+                  Step {step} of 3
+                </span>
+                <span className="text-sm font-medium text-[var(--muted)]">
+                  {step === 3 ? 'Final Step' : `${pct}%`}
+                </span>
+              </div>
+              <div className="h-2 w-full bg-[var(--border)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--primary)] rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* buttons */}
+            <div className="flex gap-4 w-full md:w-auto">
+              {step > 1 && (
+                <button
+                  onClick={back}
+                  className="px-6 py-3 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                >
+                  Back
+                </button>
+              )}
+
+              {step < 3 ? (
+                <button
+                  onClick={next}
+                  disabled={!canAdvance}
+                  className="
+                    flex-1 md:flex-none min-w-[140px] h-12 flex items-center justify-center gap-2
+                    bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold
+                    rounded-lg px-8 transition-colors shadow-md hover:shadow-lg
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                  "
+                >
+                  Next <span className="text-lg">→</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canAdvance || loading}
+                  className="
+                    flex-1 md:flex-none min-w-[180px] h-12 flex items-center justify-center gap-2
+                    bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold
+                    rounded-lg px-8 transition-colors shadow-md hover:shadow-lg
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                  "
+                >
+                  {loading ? 'Saving…' : 'Start Connecting →'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* skip link on mobile */}
+          <button
+            onClick={() => router.push('/swipe')}
+            className="text-sm text-[var(--muted)] underline self-center sm:hidden"
+          >
+            Skip for now
+          </button>
+        </div>
+      </main>
     </div>
   );
 }

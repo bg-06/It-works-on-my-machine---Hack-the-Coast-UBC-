@@ -23,7 +23,7 @@ export default function MatchPage() {
   }, [groupId, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-400 to-blue-500 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#056661] to-[#1b7e57] p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-12 text-center">
         <div className="mb-6">
           <div className="text-6xl mb-4 animate-bounce">🎉</div>

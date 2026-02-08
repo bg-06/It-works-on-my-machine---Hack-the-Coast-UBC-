@@ -11,9 +11,17 @@ export interface User {
 }
 
 export interface UserPreferences {
+  // Step 1 – goal
+  goal: 'study' | 'sustainable' | 'outdoors';
+  // Step 2 – transport
+  transport: 'transit' | 'biking' | 'walking' | 'carpool';
+  // Step 3 – vibe
+  energy: 'chill' | 'balanced' | 'active';
+  interests: string[];
+
+  /* ---- legacy / back-compat (kept so other pages don't break) ---- */
   activity: string;
   vibe: string;
-  energy: string;
   indoorOutdoor: 'indoor' | 'outdoor' | 'both';
   availability: string[];
   sustainability: string[];

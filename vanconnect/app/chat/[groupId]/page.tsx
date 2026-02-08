@@ -61,11 +61,11 @@ export default function ChatPage() {
             <div
               key={message.id}
               className={`flex gap-3 ${
-                message.senderType === 'assistant' ? 'bg-purple-50 -mx-4 px-4 py-3' : ''
+                message.senderType === 'assistant' ? 'bg-teal-50 -mx-4 px-4 py-3' : ''
               }`}
             >
               {message.senderType === 'assistant' ? (
-                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                <div className="w-10 h-10 bg-[var(--primary)] rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                   🤖
                 </div>
               ) : message.senderPhoto ? (
@@ -101,7 +101,7 @@ export default function ChatPage() {
         <div className="flex gap-2 mb-2">
           <button
             onClick={() => setShowAssistant(true)}
-            className="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition"
+            className="bg-teal-100 text-[var(--primary-dark)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-200 transition"
           >
             🤖 Ask AI Assistant
           </button>
@@ -113,12 +113,12 @@ export default function ChatPage() {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
           />
           <button
             type="submit"
             disabled={!inputText.trim() || sending}
-            className="bg-purple-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[var(--primary)] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[var(--primary-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send
           </button>
@@ -141,7 +141,7 @@ export default function ChatPage() {
               value={assistantPrompt}
               onChange={(e) => setAssistantPrompt(e.target.value)}
               placeholder="E.g., Suggest a good coffee shop near UBC..."
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] mb-4"
               rows={4}
             />
             <div className="flex gap-2">
@@ -154,7 +154,7 @@ export default function ChatPage() {
               <button
                 onClick={handleAssistant}
                 disabled={!assistantPrompt.trim()}
-                className="flex-1 bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600 transition disabled:opacity-50"
+                className="flex-1 bg-[var(--primary)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--primary-hover)] transition disabled:opacity-50"
               >
                 Ask
               </button>

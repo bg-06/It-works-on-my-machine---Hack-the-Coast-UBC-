@@ -67,9 +67,9 @@ export default function EventPage() {
       <div className="max-w-2xl mx-auto py-8">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white">
+          <div className="bg-gradient-to-r from-[#056661] to-[#1b7e57] p-6 text-white">
             <h1 className="text-3xl font-bold mb-2">{event.title}</h1>
-            <p className="text-purple-100">Your sustainable adventure awaits!</p>
+            <p className="text-teal-100">Your sustainable adventure awaits!</p>
           </div>
 
           {/* Members */}
@@ -87,7 +87,7 @@ export default function EventPage() {
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-12 h-12 bg-[var(--primary)] rounded-full flex items-center justify-center text-white font-bold">
                       {member.name.charAt(0)}
                     </div>
                   )}
@@ -151,14 +151,14 @@ export default function EventPage() {
             <button
               onClick={addToCalendar}
               disabled={addingToCalendar}
-              className="w-full bg-purple-500 text-white font-semibold py-4 px-6 rounded-lg hover:bg-purple-600 transition-all disabled:opacity-50 shadow-md"
+              className="w-full bg-[var(--primary)] text-white font-semibold py-4 px-6 rounded-lg hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 shadow-md"
             >
               {addingToCalendar ? 'Adding...' : '📅 Add to Google Calendar'}
             </button>
 
             <button
               onClick={() => router.push(`/chat/${groupId}`)}
-              className="w-full bg-white border-2 border-purple-500 text-purple-500 font-semibold py-4 px-6 rounded-lg hover:bg-purple-50 transition-all shadow-md"
+              className="w-full bg-white border-2 border-[var(--primary)] text-[var(--primary)] font-semibold py-4 px-6 rounded-lg hover:bg-teal-50 transition-all shadow-md"
             >
               💬 Chat with your group
             </button>

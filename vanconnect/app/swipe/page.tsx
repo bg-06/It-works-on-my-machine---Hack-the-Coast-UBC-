@@ -45,7 +45,7 @@ export default function SwipePage() {
           <p className="text-gray-600 mb-6">Check back later for new connections!</p>
           <button
             onClick={() => router.push('/')}
-            className="bg-purple-500 text-white font-semibold py-3 px-6 rounded-lg hover:bg-purple-600 transition"
+            className="bg-[var(--primary)] text-white font-semibold py-3 px-6 rounded-lg hover:bg-[var(--primary-hover)] transition"
           >
             Back to Home
           </button>
@@ -59,7 +59,7 @@ export default function SwipePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#056661] to-[#1b7e57] p-4">
       <div className="max-w-md mx-auto py-8">
         <h1 className="text-3xl font-bold text-white text-center mb-8">Find Your Match</h1>
 
@@ -71,7 +71,7 @@ export default function SwipePage() {
             } ${direction === 'right' ? 'translate-x-full opacity-0' : ''}`}
           >
             {/* Photo */}
-            <div className="relative h-96 bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
+            <div className="relative h-96 bg-gradient-to-br from-[#056661] to-[#1b7e57] flex items-center justify-center">
               {currentCandidate.photoUrl ? (
                 <Image
                   src={currentCandidate.photoUrl}
@@ -96,11 +96,11 @@ export default function SwipePage() {
               <div className="space-y-3">
                 <div>
                   <span className="text-sm font-semibold text-gray-700">Vibe:</span>
-                  <span className="ml-2 text-purple-600 font-medium">{currentCandidate.vibe}</span>
+                  <span className="ml-2 text-[var(--primary)] font-medium">{currentCandidate.vibe}</span>
                 </div>
                 <div>
                   <span className="text-sm font-semibold text-gray-700">Energy:</span>
-                  <span className="ml-2 text-pink-600 font-medium">{currentCandidate.energy}</span>
+                  <span className="ml-2 text-[var(--accent)] font-medium">{currentCandidate.energy}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {currentCandidate.tags.map((tag, idx) => (
