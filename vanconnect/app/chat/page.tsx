@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { uid } from '@/lib/uid';
@@ -64,6 +64,14 @@ const initialsFor = (label: string) =>
     .toUpperCase();
 
 export default function ChatLandingPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-[var(--muted)]">Loading chat…</div>}>
+      <ChatLandingContent />
+    </Suspense>
+  );
+}
+
+function ChatLandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedId = searchParams.get('groupId');
