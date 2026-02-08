@@ -41,6 +41,10 @@ export interface LocationCard {
   id: string;
   name: string;
   type: string;
+  description?: string;
+  address?: string;
+  rating?: number;
+  tags?: string[];
   sustainabilityScore: number;
   indoorOutdoor: string;
   images: string[];
