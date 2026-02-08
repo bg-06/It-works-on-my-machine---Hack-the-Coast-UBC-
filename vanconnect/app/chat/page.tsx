@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { uid } from '@/lib/uid';
 
 type GroupMember = {
   id: string;
@@ -154,7 +155,7 @@ export default function ChatLandingPage() {
       }
       const data = await res.json();
       const mapped: ChatMessage[] = (data ?? []).map((message: any, index: number) => ({
-        id: message._id ?? message.id ?? crypto.randomUUID(),
+        id: message._id ?? message.id ?? uid(),
         sender: message.senderName ?? (message.isAI ? 'AI Assistant' : 'Member'),
         senderPhoto: message.senderPhoto ?? undefined,
         text: message.text ?? '',
@@ -211,7 +212,7 @@ export default function ChatLandingPage() {
     setSending(true);
 
     const optimistic: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: uid(),
       sender: 'You',
       text,
       time: 'now',
@@ -219,7 +220,7 @@ export default function ChatLandingPage() {
     };
     const aiPlaceholder: ChatMessage | null = invokeAI
       ? {
-          id: `ai-${crypto.randomUUID()}`,
+          id: `ai-${uid()}`,
           sender: 'Gemini',
           text: 'Thinking…',
           time: 'now',
@@ -256,7 +257,7 @@ export default function ChatLandingPage() {
         setMessages((prev) => [
           ...prev.filter((msg) => msg.id !== aiPlaceholder?.id),
           {
-            id: data.ai._id ?? data.ai.id ?? crypto.randomUUID(),
+            id: data.ai._id ?? data.ai.id ?? uid(),
             sender: data.ai.senderName ?? 'Gemini',
             text: data.ai.text,
             time: 'now',

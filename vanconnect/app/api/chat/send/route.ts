@@ -32,6 +32,7 @@ function buildSystemPrompt(locationName?: string, activity?: string): string {
     "",
     "Guidelines:",
     "• Keep responses concise, friendly, and fun — use a warm, conversational tone.",
+    "• NEVER use Markdown formatting. No asterisks, no hashtags, no bullet-point symbols, no backticks, no bold/italic. Write plain text only.",
     "• Focus on Vancouver, sustainable travel tips, and group logistics.",
     "• If you mention places, suggest 2-4 options max.",
     "• Be action-oriented: give clear next steps when possible.",
@@ -100,8 +101,26 @@ const generateAIResponse = async (
   if (!text) {
     return "I'm here to help. Could you share a little more detail?";
   }
-  return text;
+  return stripMarkdown(text);
 };
+
+/** Remove common Markdown formatting so the chat stays plain-text. */
+function stripMarkdown(str: string): string {
+  return str
+    // Remove bold/italic markers  **bold**  *italic*  __bold__  _italic_
+    .replace(/(\*{1,3}|_{1,3})(.+?)\1/g, "$2")
+    // Remove inline code backticks
+    .replace(/`([^`]+)`/g, "$1")
+    // Remove heading hashes  ### Heading
+    .replace(/^#{1,6}\s+/gm, "")
+    // Remove link syntax [text](url) → text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    // Remove bullet-point symbols at line start (-, *, •)
+    .replace(/^[\s]*[-*•]\s+/gm, "")
+    // Collapse multiple blank lines
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 export async function POST(req: Request) {
   try {

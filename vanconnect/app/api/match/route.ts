@@ -66,6 +66,10 @@ export async function POST(req: Request) {
     await connectDB();
     const body = await req.json();
     const userId = String(body.userId ?? '');
+    // The activity the user was swiping under (e.g. "hiking", "study")
+    const requestedActivity = body.activity
+      ? String(body.activity).toLowerCase()
+      : null;
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -123,10 +127,14 @@ export async function POST(req: Request) {
           ]
         : [];
 
+    // Use the activity the user was actively swiping under, falling back
+    // to the saved preference for backward compatibility.
+    const activity = requestedActivity || myPref.activity || "study";
+
     // Rolling matching: find an open group with same preferences
     const openGroup = await Group.findOneAndUpdate(
       {
-        activity: myPref.activity,
+        activity,
         status: "forming",
         members: { $ne: userId },
         $expr: { $lt: [{ $size: "$members" }, 4] },
@@ -196,7 +204,7 @@ export async function POST(req: Request) {
     // No open group yet → create a new forming group
     const group = await Group.create({
       members: [userId],
-      activity: myPref.activity,
+      activity,
       vibe: myPref.vibe,
       availabilityDays,
       availabilityTimes,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LocationCard, SwipeDecision } from '@/types';
+import { uid } from '@/lib/uid';
 
 const GOAL_TYPE_MAP: Record<string, string[]> = {
   hiking: ['trail', 'outdoor', 'park'],
@@ -62,7 +63,7 @@ export function useSwipe(goal?: string) {
         );
 
         const mapped: LocationCard[] = unswiped.map((l: any) => ({
-          id: l._id ?? l.id ?? crypto.randomUUID(),
+          id: l._id ?? l.id ?? uid(),
           name: l.name ?? 'Unknown Location',
           type: l.type ?? '',
           description: l.description ?? '',
@@ -153,7 +154,7 @@ export function useSwipe(goal?: string) {
           const res = await fetch('/api/match', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId }),
+            body: JSON.stringify({ userId, activity: goal }),
           });
           if (res.ok) {
             const data = await res.json();
@@ -171,7 +172,7 @@ export function useSwipe(goal?: string) {
       setIndex(prev => prev + 1);
       return matchedGroupId;
     },
-    [locations, userId],
+    [locations, userId, goal],
   );
 
   return { currentLocation, hasMore, loading, swipe, liked };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Message } from '@/types';
+import { uid } from '@/lib/uid';
 
 export function useChat(groupId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -18,7 +19,7 @@ export function useChat(groupId: string) {
 
       // normalise Mongo docs → Message shape
       const mapped: Message[] = (data ?? []).map((m: any) => ({
-        id: m._id ?? m.id ?? crypto.randomUUID(),
+        id: m._id ?? m.id ?? uid(),
         groupId: m.groupId ?? groupId,
         senderId: m.senderId,
         senderType: m.isAI ? 'assistant' : 'user',
@@ -53,7 +54,7 @@ export function useChat(groupId: string) {
 
       // Optimistic update
       const optimistic: Message = {
-        id: crypto.randomUUID(),
+        id: uid(),
         groupId,
         senderType: 'user',
         text,
@@ -92,7 +93,7 @@ export function useChat(groupId: string) {
       setSending(true);
 
       const userMsg: Message = {
-        id: crypto.randomUUID(),
+        id: uid(),
         groupId,
         senderType: 'user',
         text: `[AI Question] ${prompt}`,
