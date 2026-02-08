@@ -100,18 +100,20 @@ export default function OnboardingPage() {
     setLoading(true);
     try {
       const body = {
+        userId: session?.user?.email ?? 'guest',
         goal,
         transport,
         energy,
         interests,
-        // map into legacy fields the backend still expects
+        // map into the fields the backend schema expects
         activity:       goal,
+        energyLevel:    energy,
         vibe:           energy,
         indoorOutdoor:  goal === 'outdoors' ? 'outdoor' as const : 'both' as const,
         availability:   [] as string[],
-        sustainability: transport === 'transit' || transport === 'biking' ? [transport] : [] as string[],
+        sustainability: transport === 'transit' || transport === 'biking' ? transport : 'low',
       };
-      const res = await fetch('/api/preferences', {
+      const res = await fetch('/api/preferences/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

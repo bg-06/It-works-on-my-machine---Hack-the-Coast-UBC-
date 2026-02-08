@@ -61,7 +61,19 @@ export default function SwipePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#056661] to-[#1b7e57] p-4">
       <div className="max-w-md mx-auto py-8">
-        <h1 className="text-3xl font-bold text-white text-center mb-8">Find Your Match</h1>
+        {/* Nav */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => router.push('/')}
+            className="text-white/70 hover:text-white transition"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="text-3xl font-bold text-white text-center">Find Your Match</h1>
+          <div className="w-6" /> {/* spacer */}
+        </div>
 
         <div className="relative">
           {/* Card */}
@@ -103,7 +115,7 @@ export default function SwipePage() {
                   <span className="ml-2 text-[var(--accent)] font-medium">{currentCandidate.energy}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {currentCandidate.tags.map((tag, idx) => (
+                  {currentCandidate.tags.map((tag: string, idx: number) => (
                     <span
                       key={idx}
                       className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium"

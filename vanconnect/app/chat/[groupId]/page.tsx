@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@/hooks/useChat';
+import { Message } from '@/types';
 import Image from 'next/image';
 
 export default function ChatPage() {
@@ -57,7 +58,7 @@ export default function ChatPage() {
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-500">No messages yet. Start the conversation!</div>
         ) : (
-          messages.map(message => (
+          messages.map((message: Message) => (
             <div
               key={message.id}
               className={`flex gap-3 ${

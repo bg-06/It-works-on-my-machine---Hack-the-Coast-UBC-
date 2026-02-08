@@ -1,61 +1,306 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useState } from 'react';
+
+type Mode = 'login' | 'register';
 
 export default function Home() {
-  const { data: session, status } = useSession();
   const router = useRouter();
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      // Check if user has completed onboarding
-      router.push('/onboarding');
-    }
-  }, [status, router]);
+  const [mode, setMode] = useState<Mode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#056661] to-[#1b7e57]">
-        <div className="text-white text-2xl">Loading...</div>
-      </div>
-    );
-  }
+  /* ---- Submit handler ---- */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required.');
+      return;
+    }
+
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (mode === 'login') {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (data.error === 'no_user') {
+            // No account – flip to register automatically
+            setMode('register');
+            setError('No account found. Create one below — your email and password have been kept.');
+            setLoading(false);
+            return;
+          }
+          setError(data.message || 'Login failed.');
+          setLoading(false);
+          return;
+        }
+
+        // Store user in localStorage for hackathon simplicity
+        localStorage.setItem('vc_user', JSON.stringify(data));
+        router.push('/onboarding');
+      } else {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name || undefined, email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.message || 'Registration failed.');
+          setLoading(false);
+          return;
+        }
+
+        localStorage.setItem('vc_user', JSON.stringify(data));
+        router.push('/onboarding');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---- Toggle between modes ---- */
+  const switchMode = () => {
+    setMode(mode === 'login' ? 'register' : 'login');
+    setError('');
+    setConfirmPassword('');
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#056661] to-[#1b7e57] p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">VanConnect</h1>
-        <p className="text-gray-600 mb-8">
-          Connect with fellow UBC students for sustainable activities and adventures around Vancouver
-        </p>
-        
-        <div className="space-y-4">
-          <button
-            onClick={() => signIn('google', { callbackUrl: '/onboarding' })}
-            className="w-full bg-white border-2 border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg"
-          >
-            <svg className="w-6 h-6" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Sign in with Google
-          </button>
+    <div className="flex min-h-screen w-full">
+      {/* ---- Left hero panel (hidden on mobile) ---- */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Gradient background instead of image so it never breaks */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#056661] via-[#0a7a6e] to-[#1b7e57]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
-          <button
-            onClick={() => router.push('/onboarding')}
-            className="w-full bg-[var(--primary)] text-white font-semibold py-3 px-6 rounded-lg hover:bg-[var(--primary-hover)] transition-all shadow-md hover:shadow-lg"
-          >
-            Continue as Guest →
-          </button>
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full text-white">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="size-10 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center">
+              <span className="text-xl">🌿</span>
+            </div>
+            <span className="text-2xl font-bold tracking-tight">VanConnect</span>
+          </div>
+
+          {/* Headline */}
+          <div className="max-w-md">
+            <h1 className="text-4xl font-bold mb-4 leading-tight">
+              Coordinate sustainably.<br />Connect locally.
+            </h1>
+            <p className="text-lg text-white/90 font-light">
+              Join thousands of Vancouver students making a difference in their campus community.
+            </p>
+          </div>
+
+          {/* Decorative dots */}
+          <div className="flex gap-2">
+            <div className="h-1 w-8 bg-white rounded-full" />
+            <div className="h-1 w-2 bg-white/50 rounded-full" />
+            <div className="h-1 w-2 bg-white/50 rounded-full" />
+          </div>
         </div>
+      </div>
 
-        <p className="text-xs text-gray-500 mt-6">
-          By signing in, you agree to let VanConnect create calendar events for your meetups
-        </p>
+      {/* ---- Right form panel ---- */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 bg-[var(--card)]">
+        <div className="w-full max-w-[420px] flex flex-col gap-8">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex justify-center mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl">🌿</span>
+              <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">VanConnect</span>
+            </div>
+          </div>
+
+          {/* Header */}
+          <div className="space-y-2 text-center lg:text-left">
+            <h2 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">
+              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            </h2>
+            <p className="text-[var(--muted)]">
+              {mode === 'login'
+                ? 'Enter your email and password to sign in.'
+                : 'Fill in the details below to get started.'}
+            </p>
+          </div>
+
+          {/* Error banner (inline, not a popup) */}
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Name (only register) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium text-[var(--foreground)]">
+                  Display Name <span className="text-[var(--muted)]">(optional)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="name"
+                    type="text"
+                    placeholder="Jane Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                  />
+                  <div className="absolute right-3 top-3 text-[var(--muted)]">
+                    <span className="text-[20px]">👤</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Email */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-[var(--foreground)]">
+                Student Email
+              </label>
+              <div className="relative">
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="name@student.ubc.ca"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                />
+                <div className="absolute right-3 top-3 text-[var(--muted)]">
+                  <span className="text-[20px]">✉️</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-[var(--foreground)]">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                >
+                  <span className="text-[20px]">{showPassword ? '🙈' : '👁️'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm password (only register) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <label htmlFor="confirm" className="text-sm font-medium text-[var(--foreground)]">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirm"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="flex h-12 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-colors"
+                  />
+                  <div className="absolute right-3 top-3 text-[var(--muted)]">
+                    <span className="text-[20px]">🔒</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Remember me (login only) */}
+            {mode === 'login' && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]/20 focus:ring-offset-0"
+                  />
+                  <span className="text-sm text-[var(--muted)]">Remember me</span>
+                </label>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] disabled:pointer-events-none disabled:opacity-50 bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] h-12 w-full shadow-sm"
+            >
+              {loading
+                ? 'Please wait…'
+                : mode === 'login'
+                  ? 'Log In'
+                  : 'Create Account'}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-[var(--border)]" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-[var(--card)] px-2 text-[var(--muted)]">Or</span>
+            </div>
+          </div>
+
+          {/* Toggle login / register */}
+          <div className="text-center text-sm text-[var(--muted)]">
+            {mode === 'login' ? (
+              <>
+                New to VanConnect?{' '}
+                <button onClick={switchMode} className="font-bold text-[var(--primary)] hover:text-[var(--primary-hover)] hover:underline">
+                  Sign Up
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button onClick={switchMode} className="font-bold text-[var(--primary)] hover:text-[var(--primary-hover)] hover:underline">
+                  Log In
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
