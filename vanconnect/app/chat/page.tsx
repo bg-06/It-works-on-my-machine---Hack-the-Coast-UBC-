@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -26,7 +26,12 @@ type ChatMessage = {
   tone?: 'highlight' | 'muted';
 };
 
-const ACCENTS = ['#F4A261', '#E76F51', '#2A9D8F', '#277DA1', '#8D6B94', '#06D6A0', '#EF476F'];
+const AVATAR_STYLES = [
+  'bg-[var(--primary)]/10 text-[var(--primary)]',
+  'bg-emerald-50 text-emerald-700',
+  'bg-slate-100 text-slate-700',
+  'bg-amber-50 text-amber-700',
+];
 
 const formatRelative = (input?: string) => {
   if (!input) return '';
@@ -47,6 +52,14 @@ const toTitle = (value: string) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
+const initialsFor = (label: string) =>
+  label
+    .split(' ')
+    .map((word) => word.charAt(0))
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
 export default function ChatLandingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,15 +69,18 @@ export default function ChatLandingPage() {
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [geminiLog, setGeminiLog] = useState<string | null>(null);
 
-  // Auth guard – redirect if not logged in
   useEffect(() => {
     try {
       const raw = localStorage.getItem('vc_user');
       if (raw) {
         const parsed = JSON.parse(raw);
         const id = parsed.userId ?? parsed._id ?? parsed.id;
-        if (id) return; // authenticated
+        if (id) return;
       }
     } catch {}
     router.replace('/');
@@ -101,7 +117,7 @@ export default function ChatLandingPage() {
         }));
 
         setGroups(mapped);
-        setActiveId(mapped[0]?.id ?? null);
+        setActiveId((prev) => prev ?? mapped[0]?.id ?? null);
       } catch (err) {
         console.error('Failed to load groups:', err);
       } finally {
@@ -120,162 +136,249 @@ export default function ChatLandingPage() {
     }
   }, [requestedId, groups]);
 
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!activeId) {
+  const loadMessages = useCallback(async (groupId: string | null) => {
+    if (!groupId) {
+      setMessages([]);
+      return;
+    }
+
+    setLoadingMessages(true);
+    try {
+      const res = await fetch(`/api/chat/get?groupId=${groupId}`);
+      if (!res.ok) {
         setMessages([]);
         return;
       }
-      setLoadingMessages(true);
-      try {
-        const res = await fetch(`/api/chat/get?groupId=${activeId}`);
-        if (!res.ok) {
-          setMessages([]);
-          return;
-        }
-        const data = await res.json();
-        const mapped: ChatMessage[] = (data ?? []).map((message: any, index: number) => ({
-          id: message._id ?? message.id ?? crypto.randomUUID(),
-          sender: message.senderName ?? (message.isAI ? 'AI Assistant' : 'Member'),
-          text: message.text ?? '',
-          time: message.createdAt ? new Date(message.createdAt).toLocaleTimeString() : 'Now',
-          tone: index === 0 ? 'highlight' : undefined,
-        }));
-        setMessages(mapped);
-      } catch (err) {
-        console.error('Failed to load messages:', err);
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
+      const data = await res.json();
+      const mapped: ChatMessage[] = (data ?? []).map((message: any, index: number) => ({
+        id: message._id ?? message.id ?? crypto.randomUUID(),
+        sender: message.senderName ?? (message.isAI ? 'AI Assistant' : 'Member'),
+        text: message.text ?? '',
+        time: formatRelative(message.createdAt ?? new Date().toISOString()),
+        tone: index === 0 ? 'highlight' : undefined,
+      }));
+      setMessages(mapped);
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, []);
 
-    loadMessages();
-  }, [activeId]);
+  useEffect(() => {
+    loadMessages(activeId);
+  }, [activeId, loadMessages]);
 
   const activeGroup = useMemo(
     () => groups.find((group) => group.id === activeId) ?? groups[0],
     [groups, activeId]
   );
 
-  return (
-    <div
-      className="min-h-screen bg-[var(--chat-sand)] text-[var(--chat-ink)]"
-      style={
-        {
-          '--chat-sand': '#f5f1ea',
-          '--chat-ink': '#1d2421',
-          '--chat-forest': '#1b4332',
-          '--chat-moss': '#40916c',
-          '--chat-mist': '#f9f6f1',
-          '--chat-border': '#e5ded3',
-          '--chat-shadow': '0 24px 60px rgba(17, 24, 39, 0.12)',
-        } as React.CSSProperties
+  const filteredGroups = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return groups;
+    return groups.filter((group) => {
+      const activity = group.activity?.toLowerCase() ?? '';
+      const memberNames = group.members.map((member) => member.name?.toLowerCase() ?? '').join(' ');
+      return activity.includes(term) || memberNames.includes(term);
+    });
+  }, [groups, searchTerm]);
+
+  const handleSend = async () => {
+    if (!draft.trim() || !activeGroup) return;
+    const raw = draft.trim();
+    const invokeAI = /@gemini\b/i.test(raw);
+    const text = raw.replace(/@gemini\b/gi, '').replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    setDraft('');
+    setSending(true);
+
+    const optimistic: ChatMessage = {
+      id: crypto.randomUUID(),
+      sender: 'You',
+      text,
+      time: 'now',
+      tone: 'highlight',
+    };
+    const aiPlaceholder: ChatMessage | null = invokeAI
+      ? {
+          id: `ai-${crypto.randomUUID()}`,
+          sender: 'Gemini',
+          text: 'Thinking…',
+          time: 'now',
+          tone: 'muted',
+        }
+      : null;
+    setMessages((prev) => [...prev, optimistic, ...(aiPlaceholder ? [aiPlaceholder] : [])]);
+
+    try {
+      const stored = localStorage.getItem('vc_user');
+      const user = stored ? JSON.parse(stored) : null;
+      const senderId = user?.userId ?? user?._id ?? user?.id;
+      const senderName = user?.name ?? 'You';
+      const senderPhoto = user?.photoUrl ?? user?.photo ?? user?.avatarUrl;
+
+      const res = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupId: activeGroup.id,
+          senderId,
+          senderName,
+          senderPhoto,
+          text,
+          askAI: invokeAI,
+        }),
+      });
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {}
+
+      if (data?.ai?.text) {
+        setMessages((prev) => [
+          ...prev.filter((msg) => msg.id !== aiPlaceholder?.id),
+          {
+            id: data.ai._id ?? data.ai.id ?? crypto.randomUUID(),
+            sender: data.ai.senderName ?? 'Gemini',
+            text: data.ai.text,
+            time: 'now',
+            tone: 'muted',
+          },
+        ]);
+        setGeminiLog(null);
+      } else if (invokeAI) {
+        setGeminiLog(
+          data?.error ? `Gemini error: ${data.error}` : 'Gemini response missing.'
+        );
       }
-    >
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(64,145,108,0.18),_transparent_55%),_radial-gradient(circle_at_20%_20%,_rgba(231,111,81,0.12),_transparent_55%)]" />
-        <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6 sm:px-8">
-          <header className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="VanConnect" className="h-10 w-auto" />
+      await loadMessages(activeGroup.id);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      if (invokeAI) {
+        setGeminiLog(`Gemini request failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDraftKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="min-h-[calc(100vh-var(--toolbar-clearance,0px))] bg-[var(--background)] text-[var(--foreground)]">
+      <div className="relative min-h-[calc(100vh-var(--toolbar-clearance,0px))]">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(5,102,97,0.12),_transparent_55%),_radial-gradient(circle_at_20%_20%,_rgba(13,84,80,0.10),_transparent_60%)]" />
+        <div className="mx-auto flex min-h-[calc(100vh-var(--toolbar-clearance,0px))] max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8">
+          <header className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 px-6 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <img src="/logo.png" alt="VanConnect" className="h-11 w-auto" />
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-[var(--chat-forest)] opacity-70">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
                   VanConnect Chats
                 </p>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Your groups, all in one feed
+                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                  Keep your groups moving together
                 </h1>
+                <p className="text-sm text-[var(--muted)]">
+                  Coordinate study sessions, rides, and eco-friendly adventures.
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="rounded-full border border-[var(--chat-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--chat-forest)] shadow-sm backdrop-blur">
+            <div className="flex flex-wrap items-center gap-3">
+              <button className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--foreground)] shadow-sm">
                 New group
               </button>
-              <button className="rounded-full bg-[var(--chat-forest)] px-4 py-2 text-sm font-semibold text-white shadow-md">
+              <button className="rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm">
                 Start chat
               </button>
             </div>
           </header>
 
-          <div className="mt-6 grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
-            <section className="flex flex-col gap-4 rounded-3xl border border-[var(--chat-border)] bg-white/80 p-5 shadow-[var(--chat-shadow)] backdrop-blur">
+          <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
+            <section className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[var(--chat-forest)]">Groups</h2>
-                <span className="text-xs text-[var(--chat-ink)] opacity-60">
-                  {loadingGroups ? 'Loading…' : `${groups.length} active`}
+                <div>
+                  <h2 className="text-lg font-semibold">Your groups</h2>
+                  <p className="text-xs text-[var(--muted)]">Stay synced with every crew.</p>
+                </div>
+                <span className="rounded-full bg-[var(--primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--primary)]">
+                  {loadingGroups ? 'Loading' : `${groups.length} active`}
                 </span>
               </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-[var(--chat-border)] bg-[var(--chat-mist)] px-4 py-3">
-                <span className="text-lg">🔎</span>
+
+              <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2">
+                <span className="text-sm">🔎</span>
                 <input
                   type="text"
-                  placeholder="Search groups or people"
-                  className="w-full bg-transparent text-sm font-medium text-[var(--chat-ink)] placeholder:text-[var(--chat-ink)] placeholder:opacity-40 focus:outline-none"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search groups or members"
+                  className="w-full bg-transparent text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none"
                 />
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
                 {loadingGroups ? (
-                  <div className="rounded-2xl border border-dashed border-[var(--chat-border)] bg-white/60 px-4 py-6 text-center text-sm text-[var(--chat-ink)] opacity-60">
+                  <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--background)] px-4 py-6 text-center text-sm text-[var(--muted)]">
                     Fetching your groups…
                   </div>
-                ) : groups.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[var(--chat-border)] bg-white/60 px-4 py-6 text-center text-sm text-[var(--chat-ink)] opacity-60">
-                    No groups yet. Match to create one.
+                ) : filteredGroups.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--background)] px-4 py-6 text-center text-sm text-[var(--muted)]">
+                    No groups match your search yet.
                   </div>
                 ) : (
-                  groups.map((group, index) => {
+                  filteredGroups.map((group, index) => {
                     const isActive = group.id === activeId;
                     const groupName = toTitle(group.activity || 'Group');
                     const members = group.members ?? [];
-                    const accent = ACCENTS[index % ACCENTS.length];
+                    const avatarStyle = AVATAR_STYLES[index % AVATAR_STYLES.length];
 
                     return (
                       <button
                         key={group.id}
                         onClick={() => setActiveId(group.id)}
-                        className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3 text-left transition ${
+                        className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3 text-left transition ${
                           isActive
-                            ? 'border-transparent bg-[var(--chat-forest)] text-white shadow-lg'
-                            : 'border-[var(--chat-border)] bg-white/70 hover:border-[var(--chat-forest)]/40'
+                            ? 'border-[var(--primary)]/40 bg-[var(--primary)]/10'
+                            : 'border-[var(--border)] bg-white hover:border-[var(--primary)]/30'
                         }`}
                       >
-                        <div
-                          className="flex h-12 w-12 items-center justify-center rounded-2xl text-base font-semibold"
-                          style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : accent, color: '#fff' }}
-                        >
-                          {groupName
-                            .split(' ')
-                            .map((word) => word[0])
-                            .slice(0, 2)
-                            .join('')}
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold ${avatarStyle}`}>
+                          {initialsFor(groupName)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate text-sm font-semibold">{groupName}</p>
-                            <span className="text-xs opacity-70">{formatRelative(group.lastMessageAt)}</span>
+                            <span className="text-xs text-[var(--muted)]">{formatRelative(group.lastMessageAt)}</span>
                           </div>
-                          <p className="truncate text-xs opacity-80">
+                          <p className="truncate text-xs text-[var(--muted)]">
                             {group.lastMessage || 'Start the conversation.'}
                           </p>
-                          <div className="mt-2 flex items-center justify-between">
-                            <div className="flex -space-x-2">
-                              {members.slice(0, 4).map((member) => {
-                                const initial = (member.name ?? 'M').charAt(0).toUpperCase();
-                                return (
-                                  <div
-                                    key={`${group.id}-${member.id}`}
-                                    className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold ${
-                                      isActive
-                                        ? 'border-white/50 bg-white/20 text-white'
-                                        : 'border-[var(--chat-border)] bg-white text-[var(--chat-ink)]'
-                                    }`}
-                                  >
-                                    {initial}
-                                  </div>
-                                );
-                              })}
-                            </div>
+                          <div className="mt-2 flex items-center gap-1">
+                            {members.slice(0, 4).map((member) => {
+                              const initial = (member.name ?? 'M').charAt(0).toUpperCase();
+                              return (
+                                <div
+                                  key={`${group.id}-${member.id}`}
+                                  className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold ${
+                                    isActive
+                                      ? 'border-[var(--primary)]/30 bg-white text-[var(--primary)]'
+                                      : 'border-[var(--border)] bg-[var(--background)] text-[var(--muted)]'
+                                  }`}
+                                >
+                                  {initial}
+                                </div>
+                              );
+                            })}
+                            {members.length > 4 && (
+                              <span className="text-[10px] text-[var(--muted)]">+{members.length - 4}</span>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -283,72 +386,92 @@ export default function ChatLandingPage() {
                   })
                 )}
               </div>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-xs text-[var(--muted)]">
+                Tip: Use the search bar to find members across your groups.
+              </div>
             </section>
 
-            <section className="flex flex-col rounded-3xl border border-[var(--chat-border)] bg-white/90 shadow-[var(--chat-shadow)] backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--chat-border)] px-6 py-5">
+            <section className="flex min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] px-6 py-5">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-[var(--chat-forest)] opacity-60">
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
                     {activeGroup?.activity ?? 'Group chat'}
                   </p>
-                  <h2 className="text-2xl font-semibold text-[var(--chat-forest)]">
+                  <h2 className="text-2xl font-semibold">
                     {activeGroup ? toTitle(activeGroup.activity) : 'Select a group'}
                   </h2>
-                  <p className="text-sm text-[var(--chat-ink)] opacity-70">
-                    {activeGroup ? `${activeGroup.members.length} members` : ' '}
+                  <p className="text-sm text-[var(--muted)]">
+                    {activeGroup ? `${activeGroup.members.length} members` : 'Choose a group to see messages.'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Link
                     href={activeGroup ? `/chat?groupId=${activeGroup.id}` : '/chat'}
-                    className="rounded-full border border-[var(--chat-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--chat-forest)]"
+                    className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--foreground)]"
                   >
                     Open thread
                   </Link>
-                  <button className="rounded-full bg-[var(--chat-forest)] px-4 py-2 text-xs font-semibold text-white">
+                  <button className="rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-white">
                     Schedule meetup
                   </button>
                 </div>
               </div>
 
+              {geminiLog && (
+                <div className="flex flex-col gap-1 border-b border-[var(--border)] bg-[var(--background)] px-6 py-3 text-xs">
+                  <div className="text-[11px] text-[var(--muted)]">
+                    {geminiLog}
+                  </div>
+                </div>
+              )}
+
               <div className="flex-1 overflow-y-auto px-6 py-6">
-                <div className="flex flex-col gap-4">
+                <div className="flex min-h-0 flex-col gap-3">
                   {loadingMessages ? (
-                    <div className="rounded-2xl border border-dashed border-[var(--chat-border)] bg-[var(--chat-mist)] px-4 py-6 text-center text-sm text-[var(--chat-ink)] opacity-60">
+                    <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--background)] px-4 py-6 text-center text-sm text-[var(--muted)]">
                       Loading chat preview…
                     </div>
                   ) : messages.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-[var(--chat-border)] bg-[var(--chat-mist)] px-4 py-6 text-center text-sm text-[var(--chat-ink)] opacity-60">
+                    <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--background)] px-4 py-6 text-center text-sm text-[var(--muted)]">
                       No messages yet. Start the conversation.
                     </div>
                   ) : (
-                    messages.map((message, index) => {
-                      const isHighlight = message.tone === 'highlight';
-                      const badgeTextClass = isHighlight ? 'text-white/70' : 'text-[var(--chat-ink)] opacity-60';
-                      const badgeBgClass = isHighlight ? 'bg-white/20' : 'bg-white';
-
+                    messages.map((message) => {
+                      const isAssistant = message.sender.toLowerCase().includes('ai') || message.sender.toLowerCase() === 'gemini';
+                      const isYou = message.sender.toLowerCase() === 'you';
                       return (
-                        <div
-                          key={message.id}
-                          className={`flex flex-col gap-2 rounded-2xl border px-4 py-3 ${
-                            isHighlight
-                              ? 'border-transparent bg-[var(--chat-forest)] text-white'
-                              : message.tone === 'muted'
-                              ? 'border-[var(--chat-border)] bg-[var(--chat-mist)] text-[var(--chat-ink)] opacity-70'
-                              : 'border-[var(--chat-border)] bg-white text-[var(--chat-ink)]'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-xs uppercase tracking-[0.24em] opacity-70">
-                            <span>{message.sender}</span>
-                            <span>{message.time}</span>
+                        <div key={message.id} className="flex items-start gap-3">
+                          <div
+                            className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold ${
+                              isAssistant
+                                ? 'bg-[var(--primary)]/15 text-[var(--primary)]'
+                                : isYou
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {message.sender
+                              .split(' ')
+                              .map((word) => word.charAt(0))
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
                           </div>
-                          <p className="text-sm font-medium leading-relaxed">{message.text}</p>
-                          {index === 1 && (
-                            <div className={`flex items-center gap-3 text-[11px] ${badgeTextClass}`}>
-                              <span className={`rounded-full px-3 py-1 ${badgeBgClass}`}>3 riders confirmed</span>
-                              <span className={`rounded-full px-3 py-1 ${badgeBgClass}`}>Meet at 6:30 PM</span>
+                          <div className="flex min-w-0 flex-1 flex-col gap-1">
+                            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                              <span className="font-semibold text-[var(--foreground)]">{message.sender}</span>
+                              <span>·</span>
+                              <span>{message.time}</span>
+                              {isAssistant && (
+                                <span className="rounded-full bg-[var(--primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)]">
+                                  AI Assist
+                                </span>
+                              )}
                             </div>
-                          )}
+                            <div className="rounded-xl bg-[var(--background)]/70 px-4 py-2 text-sm leading-relaxed text-[var(--foreground)]">
+                              {message.text}
+                            </div>
+                          </div>
                         </div>
                       );
                     })
@@ -356,21 +479,29 @@ export default function ChatLandingPage() {
                 </div>
               </div>
 
-              <div className="border-t border-[var(--chat-border)] px-6 py-5">
-                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--chat-border)] bg-[var(--chat-mist)] px-4 py-3">
+              <div className="border-t border-[var(--border)] px-6 py-5">
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3">
                   <span className="text-lg">💬</span>
                   <input
                     type="text"
-                    placeholder="Write a message to the group..."
-                    className="flex-1 bg-transparent text-sm font-medium text-[var(--chat-ink)] placeholder:text-[var(--chat-ink)] placeholder:opacity-40 focus:outline-none"
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={handleDraftKeyDown}
+                    placeholder={activeGroup ? 'Write a message…' : 'Pick a group to chat'}
+                    disabled={!activeGroup || sending}
+                    className="flex-1 bg-transparent text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none disabled:opacity-60"
                   />
-                  <button className="rounded-full bg-[var(--chat-forest)] px-4 py-2 text-xs font-semibold text-white">
-                    Send
+                  <button
+                    onClick={handleSend}
+                    disabled={!activeGroup || sending || !draft.trim()}
+                    className="rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-40"
+                  >
+                    {sending ? 'Sending…' : 'Send'}
                   </button>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--chat-ink)] opacity-60">
-                  <span>AI Assist ready for itinerary ideas</span>
-                  <span>Last activity 2 minutes ago</span>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
+                  <span>AI Assist ready for itinerary ideas.</span>
+                  <span>Last activity {formatRelative(activeGroup?.lastMessageAt)}</span>
                 </div>
               </div>
             </section>

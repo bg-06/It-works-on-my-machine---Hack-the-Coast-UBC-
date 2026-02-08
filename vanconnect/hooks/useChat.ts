@@ -63,10 +63,16 @@ export function useChat(groupId: string) {
       setMessages(prev => [...prev, optimistic]);
 
       try {
+        const stored = localStorage.getItem('vc_user');
+        const user = stored ? JSON.parse(stored) : null;
+        const senderId = user?.userId ?? user?._id ?? user?.id;
+        const senderName = user?.name ?? 'You';
+        const senderPhoto = user?.photoUrl ?? user?.photo ?? user?.avatarUrl;
+
         await fetch('/api/chat/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ groupId, text }),
+          body: JSON.stringify({ groupId, text, senderId, senderName, senderPhoto }),
         });
         // re-fetch to get server version
         await fetchMessages();
@@ -85,7 +91,6 @@ export function useChat(groupId: string) {
       if (!prompt.trim()) return;
       setSending(true);
 
-      // Show the user's prompt as a message
       const userMsg: Message = {
         id: crypto.randomUUID(),
         groupId,
@@ -96,18 +101,33 @@ export function useChat(groupId: string) {
       };
       setMessages(prev => [...prev, userMsg]);
 
-      const aiMsg: Message = {
-        id: crypto.randomUUID(),
-        groupId,
-        senderType: 'assistant',
-        text: `Great question! Here are some ideas based on "${prompt}":\n\n• Check out local Vancouver spots on Google Maps\n• Try asking your group members in the chat\n• Browse UBC events at events.ubc.ca`,
-        createdAt: new Date().toISOString(),
-        senderName: 'AI Assistant',
-      };
-      setMessages(prev => [...prev, aiMsg]);
-      setSending(false);
+      try {
+        const stored = localStorage.getItem('vc_user');
+        const user = stored ? JSON.parse(stored) : null;
+        const senderId = user?.userId ?? user?._id ?? user?.id;
+        const senderName = user?.name ?? 'You';
+        const senderPhoto = user?.photoUrl ?? user?.photo ?? user?.avatarUrl;
+
+        await fetch('/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId,
+            text: prompt,
+            askAI: true,
+            senderId,
+            senderName,
+            senderPhoto,
+          }),
+        });
+        await fetchMessages();
+      } catch (err) {
+        console.error('Failed to ask assistant:', err);
+      } finally {
+        setSending(false);
+      }
     },
-    [groupId],
+    [groupId, fetchMessages],
   );
 
   return { messages, loading, sending, sendMessage, askAssistant };
