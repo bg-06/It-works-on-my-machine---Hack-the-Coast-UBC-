@@ -1,139 +1,132 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PersonCard, SwipeDecision } from '@/types';
+import { LocationCard, SwipeDecision } from '@/types';
 
 export function useSwipe() {
-  const [candidates, setCandidates] = useState<PersonCard[]>([]);
+  const [locations, setLocations] = useState<LocationCard[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [liked, setLiked] = useState<LocationCard[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const fetchedRef = useRef(false);
 
-  /* ---- fetch the swipe feed ---- */
+  /* ---- read userId from localStorage ---- */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('vc_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setUserId(parsed.userId ?? parsed._id ?? parsed.id ?? null);
+      }
+    } catch {}
+  }, []);
+
+  /* ---- fetch all locations, filter out already-swiped ---- */
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
     const fetchFeed = async () => {
       try {
-        const res = await fetch('/api/swipe/feed');
-        if (res.ok) {
-          const data = await res.json();
-          const mapped: PersonCard[] = (data.candidates ?? data ?? []).map(
-            (c: any) => ({
-              id: c._id ?? c.id ?? crypto.randomUUID(),
-              name: c.name ?? 'Anonymous',
-              year: c.year ?? '',
-              tags: c.tags ?? c.interests ?? [],
-              vibe: c.vibe ?? c.activity ?? '',
-              energy: c.energy ?? c.energyLevel ?? '',
-              photoUrl: c.photoUrl ?? c.image ?? undefined,
-            }),
-          );
-          setCandidates(mapped);
-        } else {
-          // If feed endpoint doesn't exist yet, use demo data so the UI works
-          setCandidates(getDemoCandidates());
+        // 1. Get all locations
+        const locRes = await fetch('/api/location/all');
+        const allLocations: any[] = locRes.ok ? await locRes.json() : [];
+
+        // 2. Get already-swiped locationIds for this user
+        let swipedIds: string[] = [];
+        const uid = userId ?? (() => {
+          try {
+            const raw = localStorage.getItem('vc_user');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              return parsed.userId ?? parsed._id ?? parsed.id ?? null;
+            }
+          } catch {}
+          return null;
+        })();
+
+        if (uid) {
+          const swipeRes = await fetch(`/api/swipe?userId=${uid}`);
+          if (swipeRes.ok) {
+            const data = await swipeRes.json();
+            swipedIds = data.swipedLocationIds ?? [];
+          }
         }
+
+        // 3. Filter out already-swiped locations
+        const swipedSet = new Set(swipedIds);
+        const unswiped = allLocations.filter(
+          (l: any) => !swipedSet.has(l._id ?? l.id),
+        );
+
+        const mapped: LocationCard[] = unswiped.map((l: any) => ({
+          id: l._id ?? l.id ?? crypto.randomUUID(),
+          name: l.name ?? 'Unknown Location',
+          type: l.type ?? '',
+          sustainabilityScore: l.sustainabilityScore ?? 0,
+          indoorOutdoor: l.indoorOutdoor ?? 'both',
+          images: l.images ?? [],
+        }));
+
+        setLocations(mapped);
       } catch {
-        // Fallback to demo data so swiping still works
-        setCandidates(getDemoCandidates());
+        setLocations([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchFeed();
-  }, []);
+  }, [userId]);
 
-  const currentCandidate = candidates[index] ?? null;
-  const hasMore = index < candidates.length;
+  const currentLocation = locations[index] ?? null;
+  const hasMore = index < locations.length;
 
   /* ---- perform a swipe ---- */
   const swipe = useCallback(
     async (
-      candidateId: string,
+      locationId: string,
       decision: SwipeDecision,
     ): Promise<string | null> => {
-      try {
-        // Try the match endpoint when they "like"
-        if (decision === 'like') {
-          const res = await fetch('/api/match', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: 'guest', targetId: candidateId }),
-          });
+      const loc = locations.find(l => l.id === locationId);
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data.group?._id) {
-              // Move to next card
-              setIndex(prev => prev + 1);
-              return data.group._id;
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Swipe error:', err);
+      if (decision === 'like' && loc) {
+        setLiked(prev => [...prev, loc]);
       }
 
-      // Advance to next card regardless
+      // Persist the swipe to the backend
+      const uid = userId ?? (() => {
+        try {
+          const raw = localStorage.getItem('vc_user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            return parsed.userId ?? parsed._id ?? parsed.id ?? null;
+          }
+        } catch {}
+        return null;
+      })();
+
+      if (uid) {
+        try {
+          await fetch('/api/swipe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: uid,
+              locationId,
+              liked: decision === 'like',
+            }),
+          });
+        } catch {}
+      }
+
+      // Advance to next card
       setIndex(prev => prev + 1);
       return null;
     },
-    [],
+    [locations, userId],
   );
 
-  return { currentCandidate, hasMore, loading, swipe };
-}
-
-/* ---- demo candidates so swiping always works visually ---- */
-function getDemoCandidates(): PersonCard[] {
-  return [
-    {
-      id: 'demo-1',
-      name: 'Alex Chen',
-      year: '3rd Year · Computer Science',
-      tags: ['Coffee', 'Coding', 'Hiking'],
-      vibe: 'Study Buddies',
-      energy: 'Balanced',
-      photoUrl: undefined,
-    },
-    {
-      id: 'demo-2',
-      name: 'Maya Patel',
-      year: '2nd Year · Environmental Science',
-      tags: ['Hiking', 'Photography', 'Sustainability'],
-      vibe: 'Outdoor Adventures',
-      energy: 'Active',
-      photoUrl: undefined,
-    },
-    {
-      id: 'demo-3',
-      name: 'Jordan Lee',
-      year: '4th Year · Business',
-      tags: ['Foodie', 'Nightlife', 'Music'],
-      vibe: 'Social Explorer',
-      energy: 'Active',
-      photoUrl: undefined,
-    },
-    {
-      id: 'demo-4',
-      name: 'Sam Williams',
-      year: '1st Year · Arts',
-      tags: ['Music', 'Coffee', 'Study Groups'],
-      vibe: 'Chill Vibes',
-      energy: 'Chill',
-      photoUrl: undefined,
-    },
-    {
-      id: 'demo-5',
-      name: 'Taylor Kim',
-      year: '3rd Year · Kinesiology',
-      tags: ['Hiking', 'Biking', 'Photography'],
-      vibe: 'Eco Explorer',
-      energy: 'Active',
-      photoUrl: undefined,
-    },
-  ];
+  return { currentLocation, hasMore, loading, swipe, liked };
 }

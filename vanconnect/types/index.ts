@@ -37,6 +37,15 @@ export interface PersonCard {
   photoUrl?: string;
 }
 
+export interface LocationCard {
+  id: string;
+  name: string;
+  type: string;
+  sustainabilityScore: number;
+  indoorOutdoor: string;
+  images: string[];
+}
+
 export interface Group {
   id: string;
   members: User[];

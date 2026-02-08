@@ -23,6 +23,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       message: "Login success",
       userId: user._id,
+      name: user.name,
+      onboarded: user.onboarded ?? false,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

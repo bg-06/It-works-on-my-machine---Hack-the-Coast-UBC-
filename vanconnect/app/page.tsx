@@ -57,7 +57,12 @@ export default function Home() {
 
         // Store user in localStorage for hackathon simplicity
         localStorage.setItem('vc_user', JSON.stringify(data));
-        router.push('/onboarding');
+        // Check if already onboarded → skip to swipe
+        if (data.onboarded) {
+          router.push('/swipe');
+        } else {
+          router.push('/onboarding');
+        }
       } else {
         const res = await fetch('/api/auth/register', {
           method: 'POST',

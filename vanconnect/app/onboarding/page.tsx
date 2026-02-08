@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -67,9 +66,17 @@ const ENERGY_LABELS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const userName = session?.user?.name?.split(' ')[0] ?? 'there';
-  const userPhoto = session?.user?.image ?? '';
+
+  // Read user from localStorage (set at login/register)
+  const [vcUser, setVcUser] = useState<{ userId?: string; name?: string } | null>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('vc_user');
+      if (raw) setVcUser(JSON.parse(raw));
+    } catch {}
+  }, []);
+  const userName = vcUser?.name ?? '';
+  const userPhoto = '';
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -100,7 +107,7 @@ export default function OnboardingPage() {
     setLoading(true);
     try {
       const body = {
-        userId: session?.user?.email ?? 'guest',
+        userId: vcUser?.userId ?? 'guest',
         goal,
         transport,
         energy,
@@ -119,6 +126,16 @@ export default function OnboardingPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        // Mark user as onboarded
+        await fetch('/api/user/onboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: vcUser?.userId ?? 'guest' }),
+        });
+        // Update localStorage so future logins skip onboarding
+        const stored = JSON.parse(localStorage.getItem('vc_user') || '{}');
+        stored.onboarded = true;
+        localStorage.setItem('vc_user', JSON.stringify(stored));
         router.push('/swipe');
       }
     } catch (err) {
