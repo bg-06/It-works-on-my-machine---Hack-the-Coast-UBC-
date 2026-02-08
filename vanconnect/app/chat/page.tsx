@@ -22,6 +22,7 @@ type GroupSummary = {
 type ChatMessage = {
   id: string;
   sender: string;
+  senderPhoto?: string;
   text: string;
   time: string;
   tone?: 'highlight' | 'muted';
@@ -155,6 +156,7 @@ export default function ChatLandingPage() {
       const mapped: ChatMessage[] = (data ?? []).map((message: any, index: number) => ({
         id: message._id ?? message.id ?? crypto.randomUUID(),
         sender: message.senderName ?? (message.isAI ? 'AI Assistant' : 'Member'),
+        senderPhoto: message.senderPhoto ?? undefined,
         text: message.text ?? '',
         time: formatRelative(message.createdAt ?? new Date().toISOString()),
         tone: index === 0 ? 'highlight' : undefined,
@@ -432,22 +434,30 @@ export default function ChatLandingPage() {
                       const isYou = message.sender.toLowerCase() === 'you';
                       return (
                         <div key={message.id} className="flex items-start gap-3">
-                          <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold ${
-                              isAssistant
-                                ? 'bg-[var(--primary)]/15 text-[var(--primary)]'
-                                : isYou
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-slate-100 text-slate-700'
-                            }`}
-                          >
-                            {message.sender
-                              .split(' ')
-                              .map((word) => word.charAt(0))
-                              .slice(0, 2)
-                              .join('')
-                              .toUpperCase()}
-                          </div>
+                          {message.senderPhoto ? (
+                            <img
+                              src={message.senderPhoto}
+                              alt={message.sender}
+                              className="h-9 w-9 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div
+                              className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold ${
+                                isAssistant
+                                  ? 'bg-[var(--primary)]/15 text-[var(--primary)]'
+                                  : isYou
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {message.sender
+                                .split(' ')
+                                .map((word) => word.charAt(0))
+                                .slice(0, 2)
+                                .join('')
+                                .toUpperCase()}
+                            </div>
+                          )}
                           <div className="flex min-w-0 flex-1 flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                               <span className="font-semibold text-[var(--foreground)]">{message.sender}</span>
