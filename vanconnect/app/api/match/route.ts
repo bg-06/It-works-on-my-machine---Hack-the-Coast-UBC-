@@ -9,7 +9,11 @@ export async function POST(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
-    const userId = body.userId;
+    const userId = String(body.userId ?? '');
+
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    }
 
     // Get current user's preferences
     const myPref = await Preference.findOne({ userId });
@@ -30,28 +34,31 @@ export async function POST(req: Request) {
     }
 
     // Rolling matching: find an open group with same preferences
-    const openGroup = await Group.findOne({
-      activity: myPref.activity,
-      status: "forming",
-      members: { $ne: userId },
-      $expr: { $lt: [{ $size: "$members" }, 4] },
-      $or: [
-        { vibe: myPref.vibe },
-        { vibe: { $exists: false } },
-        { vibe: null },
-        { vibe: "" },
-      ],
-    }).sort({ createdAt: 1 });
+    const openGroup = await Group.findOneAndUpdate(
+      {
+        activity: myPref.activity,
+        status: "forming",
+        members: { $ne: userId },
+        $expr: { $lt: [{ $size: "$members" }, 4] },
+        $or: [
+          { vibe: myPref.vibe },
+          { vibe: { $exists: false } },
+          { vibe: null },
+          { vibe: "" },
+        ],
+      },
+      {
+        $addToSet: { members: userId },
+        $set: { vibe: myPref.vibe },
+      },
+      { new: true, sort: { createdAt: 1 } }
+    );
 
     if (openGroup) {
-      openGroup.members.push(userId);
-      if (!openGroup.vibe) {
-        openGroup.vibe = myPref.vibe;
-      }
-      if (openGroup.members.length >= 3) {
+      if (openGroup.members.length >= 3 && openGroup.status !== "confirmed") {
         openGroup.status = "confirmed";
+        await openGroup.save();
       }
-      await openGroup.save();
 
       return NextResponse.json({
         message: "Joined existing group",
