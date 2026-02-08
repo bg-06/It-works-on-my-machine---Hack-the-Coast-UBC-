@@ -7,19 +7,16 @@ import User from "@/models/User";
 export async function POST(req: Request) {
   try {
     await connectDB();
-
     const body = await req.json();
 
-    const user = await User.create({
-      name: body.name,
-      onboarded: false,
-    });
+    const user = await User.findByIdAndUpdate(
+      body.userId,
+      { onboarded: true },
+      { new: true }
+    );
 
     return NextResponse.json(user);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

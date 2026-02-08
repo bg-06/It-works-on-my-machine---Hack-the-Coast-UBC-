@@ -40,7 +40,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Geist", "SF Pro Text", "Segoe UI", sans-serif;
 }
 
 /* ---- custom range slider for energy step ---- */
