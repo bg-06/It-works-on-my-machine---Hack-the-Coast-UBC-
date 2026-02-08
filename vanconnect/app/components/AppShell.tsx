@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 
 type NavItem = {
   label: string;
   href: string;
   activeFor?: string[];
-  icon: (className: string) => JSX.Element;
+  icon: (className: string) => React.ReactElement;
 };
 
 const NAV_ITEMS: NavItem[] = [

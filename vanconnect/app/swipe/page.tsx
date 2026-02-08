@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +24,66 @@ export default function SwipePage() {
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+
+  /* ---- Drag / swipe gesture state ---- */
+  const cardRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const SWIPE_THRESHOLD = 120; // px needed to trigger a swipe
+
+  const handleSwipe = useCallback(async (decision: 'like' | 'pass') => {
+    if (!currentLocation || swiping) return;
+
+    setSwiping(true);
+    setDragOffset({ x: 0, y: 0 });
+    setDirection(decision === 'like' ? 'right' : 'left');
+
+    setTimeout(async () => {
+      await swipe(currentLocation.id, decision);
+      setSwiping(false);
+      setDirection(null);
+    }, 300);
+  }, [currentLocation, swiping, swipe]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (swiping || expanded) return;
+    dragging.current = true;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  }, [swiping, expanded]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - startX.current;
+    const dy = (e.clientY - startY.current) * 0.3; // dampen vertical movement
+    setDragOffset({ x: dx, y: dy });
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    if (!dragging.current) return;
+    dragging.current = false;
+
+    if (dragOffset.x > SWIPE_THRESHOLD) {
+      handleSwipe('like');
+    } else if (dragOffset.x < -SWIPE_THRESHOLD) {
+      handleSwipe('pass');
+    }
+    setDragOffset({ x: 0, y: 0 });
+  }, [dragOffset.x, handleSwipe]);
+
+  // Derived values for card transform during drag
+  const dragRotation = dragOffset.x * 0.08; // slight rotation
+  const dragOpacity = Math.max(0, 1 - Math.abs(dragOffset.x) / 500);
+  const dragStyle = dragging.current || (dragOffset.x !== 0)
+    ? {
+        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragRotation}deg)`,
+        transition: dragging.current ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
+        opacity: dragOpacity,
+      }
+    : undefined;
 
   useEffect(() => {
     const loadPrefGoal = async () => {
@@ -76,19 +136,6 @@ export default function SwipePage() {
     setTheme(next);
     applyTheme(next);
     localStorage.setItem('vc_theme', next);
-  };
-
-  const handleSwipe = async (decision: 'like' | 'pass') => {
-    if (!currentLocation || swiping) return;
-
-    setSwiping(true);
-    setDirection(decision === 'like' ? 'right' : 'left');
-
-    setTimeout(async () => {
-      await swipe(currentLocation.id, decision);
-      setSwiping(false);
-      setDirection(null);
-    }, 300);
   };
 
   /* ---- Loading ---- */
@@ -237,10 +284,31 @@ export default function SwipePage() {
             <div className="relative w-full max-w-2xl">
               {/* Card */}
               <div
-                className={`rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl transition-all duration-300 ${
+                ref={cardRef}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                style={direction ? undefined : dragStyle}
+                className={`rounded-3xl border border-[var(--border)] bg-[var(--card)] shadow-xl transition-all duration-300 select-none touch-none ${
                   direction === 'left' ? '-translate-x-full opacity-0' : ''
                 } ${direction === 'right' ? 'translate-x-full opacity-0' : ''}`}
               >
+                {/* Swipe overlay indicators */}
+                {dragOffset.x > 30 && !direction && (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-emerald-500/15">
+                    <span className="rounded-xl border-4 border-emerald-500 px-6 py-3 text-4xl font-black uppercase tracking-widest text-emerald-500 rotate-[-15deg]">
+                      LIKE
+                    </span>
+                  </div>
+                )}
+                {dragOffset.x < -30 && !direction && (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-rose-500/15">
+                    <span className="rounded-xl border-4 border-rose-500 px-6 py-3 text-4xl font-black uppercase tracking-widest text-rose-500 rotate-[15deg]">
+                      NOPE
+                    </span>
+                  </div>
+                )}
                 {/* Hero area */}
                 <button
                   type="button"

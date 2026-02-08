@@ -116,6 +116,7 @@ export default function Home() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="VanConnect" className="h-30 w-auto" />
+            <span className="text-3xl font-bold tracking-tight text-white">VanConnect</span>
           </div>
 
           {/* Headline */}
@@ -144,6 +145,7 @@ export default function Home() {
           <div className="lg:hidden flex justify-center mb-2">
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="VanConnect" className="h-10 w-auto" />
+              <span className="text-xl font-bold tracking-tight text-[var(--foreground)]">VanConnect</span>
             </div>
           </div>
 
