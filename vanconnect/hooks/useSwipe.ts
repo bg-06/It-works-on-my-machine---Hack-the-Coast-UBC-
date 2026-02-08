@@ -111,7 +111,12 @@ export function useSwipe() {
           });
           if (res.ok) {
             const data = await res.json();
-            matchedGroupId = data?.group?._id ?? data?.group?.id ?? null;
+            const group = data?.group ?? null;
+            const memberCount = Array.isArray(group?.members) ? group.members.length : 0;
+            const isRealMatch = (data?.matchFound as boolean | undefined) ?? memberCount >= 2;
+            const resolvedId = group?._id ?? group?.id ?? null;
+            // Only treat it as a "match" when at least 2 people are in the group
+            matchedGroupId = isRealMatch ? resolvedId : null;
           }
         } catch {}
       }

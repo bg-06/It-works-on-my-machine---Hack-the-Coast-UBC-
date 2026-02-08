@@ -96,50 +96,16 @@ export function useChat(groupId: string) {
       };
       setMessages(prev => [...prev, userMsg]);
 
-      try {
-        const res = await fetch(`/api/groups/${groupId}/assistant`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const aiMsg: Message = {
-            id: crypto.randomUUID(),
-            groupId,
-            senderType: 'assistant',
-            text: data.reply ?? data.text ?? 'Sorry, I couldn\'t generate a response.',
-            createdAt: new Date().toISOString(),
-            senderName: 'AI Assistant',
-          };
-          setMessages(prev => [...prev, aiMsg]);
-        } else {
-          // If assistant endpoint isn't available, show a helpful fallback
-          const aiMsg: Message = {
-            id: crypto.randomUUID(),
-            groupId,
-            senderType: 'assistant',
-            text: `Great question! Here are some ideas based on "${prompt}":\n\n• Check out local Vancouver spots on Google Maps\n• Try asking your group members in the chat\n• Browse UBC events at events.ubc.ca`,
-            createdAt: new Date().toISOString(),
-            senderName: 'AI Assistant',
-          };
-          setMessages(prev => [...prev, aiMsg]);
-        }
-      } catch (err) {
-        console.error('Assistant error:', err);
-        const fallback: Message = {
-          id: crypto.randomUUID(),
-          groupId,
-          senderType: 'assistant',
-          text: 'Sorry, the assistant is currently unavailable. Try again later!',
-          createdAt: new Date().toISOString(),
-          senderName: 'AI Assistant',
-        };
-        setMessages(prev => [...prev, fallback]);
-      } finally {
-        setSending(false);
-      }
+      const aiMsg: Message = {
+        id: crypto.randomUUID(),
+        groupId,
+        senderType: 'assistant',
+        text: `Great question! Here are some ideas based on "${prompt}":\n\n• Check out local Vancouver spots on Google Maps\n• Try asking your group members in the chat\n• Browse UBC events at events.ubc.ca`,
+        createdAt: new Date().toISOString(),
+        senderName: 'AI Assistant',
+      };
+      setMessages(prev => [...prev, aiMsg]);
+      setSending(false);
     },
     [groupId],
   );

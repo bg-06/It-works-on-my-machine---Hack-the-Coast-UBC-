@@ -41,7 +41,7 @@ function MatchContent() {
             🌿 View Your Event
           </button>
           <button
-            onClick={() => router.push(`/chat/${groupId}`)}
+            onClick={() => router.push(`/chat?groupId=${groupId}`)}
             className="w-full bg-white border-2 border-[var(--primary)] text-[var(--primary)] font-semibold py-3 px-6 rounded-lg hover:bg-teal-50 transition-all"
           >
             💬 Start Chatting

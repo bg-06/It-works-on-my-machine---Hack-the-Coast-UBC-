@@ -5,11 +5,41 @@ import { useEffect, useState } from 'react';
 import { Group, Event } from '@/types';
 import Image from 'next/image';
 
+type GroupDetails = Group & {
+  eventTime?: string | null;
+  locationName?: string;
+};
+
+const buildFallbackEvent = (groupId: string, groupData?: Partial<GroupDetails>) => {
+  let start = groupData?.eventTime ? new Date(groupData.eventTime) : new Date();
+  if (Number.isNaN(start.getTime())) {
+    start = new Date();
+  }
+  if (!groupData?.eventTime) {
+    start.setDate(start.getDate() + 1);
+    start.setHours(14, 0, 0, 0);
+  }
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const locationName = groupData?.locationName || 'Vancouver – TBD';
+  const transitHint = 'Take the SkyTrain or bike over!';
+
+  return {
+    id: `evt-${groupId}`,
+    groupId,
+    title: groupData?.activity ? `🌿 ${groupData.activity}` : '🌿 Sustainable Meetup',
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
+    locationName,
+    transitHint,
+    badges: ['Low Carbon', 'Local Business'],
+  };
+};
+
 export default function EventPage() {
   const params = useParams();
   const router = useRouter();
   const groupId = params.groupId as string;
-  const [group, setGroup] = useState<Group | null>(null);
+  const [group, setGroup] = useState<GroupDetails | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
@@ -20,14 +50,15 @@ export default function EventPage() {
     const fetchGroupData = async () => {
       try {
         // Try to fetch group details
-        const res = await fetch(`/api/groups/${groupId}`);
+        const res = await fetch(`/api/group?groupId=${groupId}`);
         if (res.ok) {
           const data = await res.json();
-          setGroup(data.group ?? data);
-          setEvent(data.event ?? null);
+          const groupData = data.group ?? data;
+          setGroup(groupData);
+          setEvent(data.event ?? buildFallbackEvent(groupId, groupData));
         } else {
           // Fallback: build a placeholder group/event from the groupId
-          setGroup({
+          const fallbackGroup: GroupDetails = {
             id: groupId,
             members: [
               { id: 'you', name: 'You', email: '' },
@@ -36,11 +67,11 @@ export default function EventPage() {
             activity: 'Sustainable Hangout',
             vibe: 'balanced',
             createdAt: new Date().toISOString(),
-          });
+          };
+          setGroup(fallbackGroup);
 
           // Try to get a suggested location for the event
           let locationName = 'Vancouver – TBD';
-          let transitHint = 'Take the SkyTrain or bike over!';
           try {
             const locRes = await fetch('/api/location/suggest', {
               method: 'POST',
@@ -53,23 +84,12 @@ export default function EventPage() {
             }
           } catch { /* ignore */ }
 
-          const start = new Date();
-          start.setDate(start.getDate() + 1);
-          start.setHours(14, 0, 0, 0);
-
-          setEvent({
-            id: `evt-${groupId}`,
-            groupId,
-            title: '🌿 Sustainable Meetup',
-            startTime: start.toISOString(),
-            endTime: new Date(start.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-            locationName,
-            transitHint,
-            badges: ['Low Carbon', 'Local Business'],
-          });
+          setEvent(buildFallbackEvent(groupId, { ...fallbackGroup, locationName }));
         }
       } catch (err) {
         console.error('Failed to fetch event:', err);
+        setGroup(null);
+        setEvent(null);
       } finally {
         setLoading(false);
       }
@@ -81,15 +101,7 @@ export default function EventPage() {
   const addToCalendar = async () => {
     setAddingToCalendar(true);
     try {
-      const res = await fetch(`/api/groups/${groupId}/calendar`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        alert('Event added to your Google Calendar!');
-      } else {
-        // Calendar endpoint might not be wired up yet
-        alert('Calendar integration coming soon! For now, save the date manually.');
-      }
+      alert('Calendar integration coming soon! For now, save the date manually.');
     } catch (error) {
       console.error('Failed to add to calendar:', error);
       alert('Calendar integration coming soon! For now, save the date manually.');
@@ -209,7 +221,7 @@ export default function EventPage() {
             </button>
 
             <button
-              onClick={() => router.push(`/chat/${groupId}`)}
+              onClick={() => router.push(`/chat?groupId=${groupId}`)}
               className="w-full bg-white border-2 border-[var(--primary)] text-[var(--primary)] font-semibold py-4 px-6 rounded-lg hover:bg-teal-50 transition-all shadow-md"
             >
               💬 Chat with your group

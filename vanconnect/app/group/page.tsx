@@ -73,7 +73,7 @@ export default function GroupsSchedulePage() {
           return;
         }
 
-        const res = await fetch(`/api/groups?userId=${userId}`);
+        const res = await fetch(`/api/group?userId=${userId}`);
         if (!res.ok) {
           setGroups([]);
           setLoading(false);
@@ -183,7 +183,7 @@ export default function GroupsSchedulePage() {
                         <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                           <span>{group.members.length} members</span>
                           <Link
-                            href={`/chat/${group.id}`}
+                            href={`/chat?groupId=${group.id}`}
                             className="rounded-full border border-[var(--border)] px-3 py-1 text-[11px] font-semibold text-[var(--primary)]"
                           >
                             Open chat

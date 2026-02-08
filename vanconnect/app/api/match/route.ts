@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: "Already in group",
         group: existing,
+        matchFound: Array.isArray(existing.members) && existing.members.length >= 2,
       });
     }
 
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: "Joined existing group",
         group: openGroup,
+        matchFound: Array.isArray(openGroup.members) && openGroup.members.length >= 2,
       });
     }
 
@@ -77,9 +79,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       message: "Group created",
       group,
+      matchFound: false,
     });
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

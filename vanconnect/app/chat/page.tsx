@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type GroupMember = {
   id: string;
@@ -49,6 +49,8 @@ const toTitle = (value: string) =>
 
 export default function ChatLandingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedId = searchParams.get('groupId');
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -81,7 +83,7 @@ export default function ChatLandingPage() {
           return;
         }
 
-        const res = await fetch(`/api/groups?userId=${userId}`);
+        const res = await fetch(`/api/group?userId=${userId}`);
         if (!res.ok) {
           setGroups([]);
           setLoadingGroups(false);
@@ -109,6 +111,14 @@ export default function ChatLandingPage() {
 
     loadGroups();
   }, []);
+
+  useEffect(() => {
+    if (!requestedId || groups.length === 0) return;
+    const exists = groups.some((group) => group.id === requestedId);
+    if (exists) {
+      setActiveId(requestedId);
+    }
+  }, [requestedId, groups]);
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -290,7 +300,7 @@ export default function ChatLandingPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <Link
-                    href={activeGroup ? `/chat/${activeGroup.id}` : '/chat'}
+                    href={activeGroup ? `/chat?groupId=${activeGroup.id}` : '/chat'}
                     className="rounded-full border border-[var(--chat-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--chat-forest)]"
                   >
                     Open thread
