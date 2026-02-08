@@ -17,24 +17,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Preferences not found" }, { status: 400 });
     }
 
-    // Find similar users
-    const matches = await Preference.find({
-      activity: myPref.activity,
-      vibe: myPref.vibe,
-      userId: { $ne: userId },
-    }).limit(4); // max group size = 5 including self
-
-    const memberIds = [userId, ...matches.map(m => m.userId)];
-
-    // Need at least 3 people
-    if (memberIds.length < 3) {
-      return NextResponse.json({ message: "Not enough matches yet" });
+    // If user already has an active group, return it
+    const existing = await Group.findOne({
+      members: userId,
+      status: { $in: ["forming", "confirmed"] },
+    });
+    if (existing) {
+      return NextResponse.json({
+        message: "Already in group",
+        group: existing,
+      });
     }
 
-    // Create group
-    const group = await Group.create({
-      members: memberIds,
+    // Rolling matching: find an open group with same preferences
+    const openGroup = await Group.findOne({
       activity: myPref.activity,
+      status: "forming",
+      members: { $ne: userId },
+      $expr: { $lt: [{ $size: "$members" }, 4] },
+      $or: [
+        { vibe: myPref.vibe },
+        { vibe: { $exists: false } },
+        { vibe: null },
+        { vibe: "" },
+      ],
+    }).sort({ createdAt: 1 });
+
+    if (openGroup) {
+      openGroup.members.push(userId);
+      if (!openGroup.vibe) {
+        openGroup.vibe = myPref.vibe;
+      }
+      if (openGroup.members.length >= 3) {
+        openGroup.status = "confirmed";
+      }
+      await openGroup.save();
+
+      return NextResponse.json({
+        message: "Joined existing group",
+        group: openGroup,
+      });
+    }
+
+    // No open group yet → create a new forming group
+    const group = await Group.create({
+      members: [userId],
+      activity: myPref.activity,
+      vibe: myPref.vibe,
+      status: "forming",
     });
 
     return NextResponse.json({

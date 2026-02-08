@@ -121,9 +121,25 @@ export function useSwipe() {
         } catch {}
       }
 
+      let matchedGroupId: string | null = null;
+
+      if (uid && decision === 'like') {
+        try {
+          const res = await fetch('/api/match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uid }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            matchedGroupId = data?.group?._id ?? data?.group?.id ?? null;
+          }
+        } catch {}
+      }
+
       // Advance to next card
       setIndex(prev => prev + 1);
-      return null;
+      return matchedGroupId;
     },
     [locations, userId],
   );

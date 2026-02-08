@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const groups = await Group.find({ members: userId }).sort({ createdAt: -1 });
+    const groups = await Group.find({ members: userId }).sort({ eventTime: 1, createdAt: -1 });
 
     const payload = await Promise.all(
       groups.map(async (group: any) => {
@@ -38,6 +38,9 @@ export async function GET(req: Request) {
           members,
           lastMessage: lastMessage?.text ?? "",
           lastMessageAt: lastMessage?.createdAt ?? group.createdAt,
+          eventTime: group.eventTime ?? null,
+          locationName: group.locationName ?? "",
+          status: group.status ?? "forming",
         };
       })
     );
