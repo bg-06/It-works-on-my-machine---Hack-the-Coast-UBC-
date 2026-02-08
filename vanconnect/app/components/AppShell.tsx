@@ -82,11 +82,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {children}
       {!hideToolbar && (
         <nav className="fixed left-0 right-0 bottom-0 z-50 sm:left-1/2 sm:right-auto sm:bottom-[50px] sm:-translate-x-1/2">
-          <div className="w-full rounded-none border-t border-white/30 bg-white/15 px-3 py-2 shadow-[0_20px_60px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:w-[min(92vw,520px)] sm:rounded-3xl sm:border">
+          <div className="w-full rounded-none border-t border-[var(--border)] bg-[var(--card)] px-3 py-2 shadow-[0_20px_60px_rgba(0,0,0,0.18)] backdrop-blur-2xl sm:w-[min(92vw,520px)] sm:rounded-3xl sm:border">
             <div className="flex items-center justify-between gap-1">
               {NAV_ITEMS.map((item) => {
                 const active = isActiveRoute(pathname, item);
-                const iconClass = 'h-5 w-5 text-white';
+                const iconClass = 'h-5 w-5';
                 return (
                   <Link
                     key={item.href}
@@ -98,8 +98,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       className={
                         `flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-semibold transition ` +
                         (active
-                          ? 'text-[var(--primary)] bg-white/35 shadow-[0_8px_20px_rgba(5,102,97,0.25)]'
-                          : 'text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/20')
+                          ? 'text-[var(--primary)] bg-[var(--background)] shadow-[0_8px_20px_rgba(5,102,97,0.18)]'
+                          : 'text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)]')
                       }
                     >
                       {item.icon(iconClass)}

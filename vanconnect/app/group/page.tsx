@@ -152,7 +152,7 @@ export default function GroupsSchedulePage() {
               {buckets.map((bucket) => (
                 <div key={bucket.key} className="px-6 py-6">
                   <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">{bucket.label}</h2>
+                    <h2 className="text-lg font-semibold text-[var(--foreground)]">{bucket.label}</h2>
                     <span className="text-xs text-[var(--muted)]">{bucket.items.length} events</span>
                   </div>
 
@@ -160,7 +160,7 @@ export default function GroupsSchedulePage() {
                     {bucket.items.map((group) => (
                       <div
                         key={group.id}
-                        className="flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--border)] bg-white px-4 py-4"
+                        className="flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--border)] bg-white px-4 py-4 text-slate-900"
                       >
                         <div className="w-20 text-sm font-semibold text-[var(--primary)]">
                           {formatTime(group.eventTime)}
@@ -176,11 +176,11 @@ export default function GroupsSchedulePage() {
                               {group.status ?? 'forming'}
                             </span>
                           </div>
-                          <p className="text-sm text-[var(--muted)]">
+                          <p className="text-sm text-slate-600">
                             {group.locationName || 'Location to be announced'}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                        <div className="flex items-center gap-2 text-xs text-slate-600">
                           <span>{group.members.length} members</span>
                           <Link
                             href={`/chat?groupId=${group.id}`}
