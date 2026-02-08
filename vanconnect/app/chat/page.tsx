@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -136,17 +136,17 @@ export default function ChatLandingPage() {
     }
   }, [requestedId, groups]);
 
-  const loadMessages = useCallback(async (groupId: string | null) => {
+  const loadMessages = useCallback(async (groupId: string | null, isPolling = false) => {
     if (!groupId) {
       setMessages([]);
       return;
     }
 
-    setLoadingMessages(true);
+    if (!isPolling) setLoadingMessages(true);
     try {
       const res = await fetch(`/api/chat/get?groupId=${groupId}`);
       if (!res.ok) {
-        setMessages([]);
+        if (!isPolling) setMessages([]);
         return;
       }
       const data = await res.json();
@@ -161,12 +161,24 @@ export default function ChatLandingPage() {
     } catch (err) {
       console.error('Failed to load messages:', err);
     } finally {
-      setLoadingMessages(false);
+      if (!isPolling) setLoadingMessages(false);
     }
   }, []);
 
   useEffect(() => {
     loadMessages(activeId);
+  }, [activeId, loadMessages]);
+
+  // Poll for new messages every 3 seconds
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+
+  useEffect(() => {
+    if (!activeId) return;
+    const interval = setInterval(() => {
+      loadMessages(activeIdRef.current, true);
+    }, 3000);
+    return () => clearInterval(interval);
   }, [activeId, loadMessages]);
 
   const activeGroup = useMemo(
@@ -274,7 +286,7 @@ export default function ChatLandingPage() {
     <div className="min-h-[calc(100vh-var(--toolbar-clearance,0px))] bg-[var(--background)] text-[var(--foreground)]">
       <div className="relative min-h-[calc(100vh-var(--toolbar-clearance,0px))]">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(5,102,97,0.12),_transparent_55%),_radial-gradient(circle_at_20%_20%,_rgba(13,84,80,0.10),_transparent_60%)]" />
-        <div className="mx-auto flex min-h-[calc(100vh-var(--toolbar-clearance,0px))] max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8">
+        <div className="mx-auto flex min-h-[calc(85vh-var(--toolbar-clearance,0px))] max-h-[85vh] max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8 overflow-hidden">
           <header className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 px-6 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <img src="/logo.png" alt="VanConnect" className="h-11 w-auto" />
@@ -300,8 +312,8 @@ export default function ChatLandingPage() {
             </div>
           </header>
 
-          <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
-            <section className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm">
+          <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[340px_1fr] min-h-0">
+            <section className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm min-h-0 max-h-[calc(100vh-220px)] overflow-hidden">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">Your groups</h2>
@@ -391,7 +403,7 @@ export default function ChatLandingPage() {
               </div>
             </section>
 
-            <section className="flex min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
+            <section className="flex min-h-0 max-h-[calc(100vh-220px)] flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] px-6 py-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
