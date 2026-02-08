@@ -105,10 +105,7 @@ export default function Home() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full text-white">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="size-10 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center">
-              <span className="text-xl">🌿</span>
-            </div>
-            <span className="text-2xl font-bold tracking-tight">VanConnect</span>
+            <img src="/logo.png" alt="VanConnect" className="h-30 w-auto" />
           </div>
 
           {/* Headline */}
@@ -117,7 +114,7 @@ export default function Home() {
               Coordinate sustainably.<br />Connect locally.
             </h1>
             <p className="text-lg text-white/90 font-light">
-              Join thousands of Vancouver students making a difference in their campus community.
+              Join thousands of Vancouverites in making a difference in their community.
             </p>
           </div>
 
@@ -136,8 +133,7 @@ export default function Home() {
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-3xl">🌿</span>
-              <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">VanConnect</span>
+              <img src="/logo.png" alt="VanConnect" className="h-10 w-auto" />
             </div>
           </div>
 

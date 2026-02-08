@@ -16,6 +16,19 @@ export default function ChatPage() {
   const [assistantPrompt, setAssistantPrompt] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Auth guard – redirect if not logged in
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('vc_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const id = parsed.userId ?? parsed._id ?? parsed.id;
+        if (id) return; // authenticated
+      }
+    } catch {}
+    router.replace('/');
+  }, [router]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -48,6 +61,7 @@ export default function ChatPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+        <img src="/logo.png" alt="VanConnect" className="h-8 w-auto" />
         <h1 className="text-xl font-bold text-gray-800">Group Chat</h1>
       </div>
 
