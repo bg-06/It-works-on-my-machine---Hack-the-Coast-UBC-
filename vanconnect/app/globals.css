@@ -43,6 +43,15 @@ body {
   font-family: var(--font-geist-sans), "Geist", "SF Pro Text", "Segoe UI", sans-serif;
 }
 
+.toolbar-safe {
+  --toolbar-clearance: calc(14vh + 5.5rem);
+}
+
+.toolbar-safe > .min-h-screen {
+  padding-bottom: var(--toolbar-clearance);
+}
+
+
 /* ---- custom range slider for energy step ---- */
 input[type="range"].energy-slider {
   -webkit-appearance: none;
