@@ -89,9 +89,9 @@ export default function SwipePage() {
       setSwiping(false);
       setDirection(null);
 
-      // If a match was found, redirect to the match celebration page
+      // If a match was found, go straight to the event page
       if (groupId) {
-        router.push(`/match?groupId=${groupId}`);
+        router.push(`/event/${groupId}`);
       }
     }, 300);
   };

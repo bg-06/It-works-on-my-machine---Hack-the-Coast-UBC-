@@ -66,7 +66,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const HIDE_ROUTES = ['/', '/onboarding'];
-const HIDE_PREFIXES = ['/match'];
+const HIDE_PREFIXES: string[] = [];
 
 const isActiveRoute = (pathname: string, item: NavItem) => {
   const matches = item.activeFor ?? [item.href];

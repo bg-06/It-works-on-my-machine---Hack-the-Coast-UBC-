@@ -4,23 +4,94 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { connectDB } from "@/lib/mongodb";
 import Message from "@/models/Message";
+import Group from "@/models/Group";
 
-const SYSTEM_PROMPT = [
-  "You are the VanConnect AI assistant called Gemini.",
-  "Keep responses concise, friendly, and action-oriented.",
-  "Focus on Vancouver, UBC, sustainable travel, and group logistics when relevant.",
-  "If you mention places, suggest 2-4 options max.",
-].join("\n");
+/**
+ * Build a context-aware system prompt that tells the AI about the
+ * specific location / activity the group is planning to visit.
+ */
+function buildSystemPrompt(locationName?: string, activity?: string): string {
+  const lines = [
+    "You are the VanConnect AI assistant — a friendly, upbeat helper for a group of people planning a sustainable outing in Vancouver, BC.",
+    "",
+  ];
 
-const generateAIResponse = async (prompt: string) => {
+  if (locationName) {
+    lines.push(
+      `This conversation is about "${locationName}" in Vancouver, BC.`,
+    );
+  }
+  if (activity) {
+    lines.push(`The group's activity / goal is: ${activity}.`);
+  }
+
+  lines.push(
+    "The group is aiming to visit this spot in a sustainable, eco-friendly manner (transit, biking, walking, carpooling, etc.).",
+    "",
+    "Below is the full group chat history so far. Use it for context when answering — don't ask the user to repeat things that were already said.",
+    "",
+    "Guidelines:",
+    "• Keep responses concise, friendly, and fun — use a warm, conversational tone.",
+    "• Focus on Vancouver, sustainable travel tips, and group logistics.",
+    "• If you mention places, suggest 2-4 options max.",
+    "• Be action-oriented: give clear next steps when possible.",
+  );
+
+  return lines.join("\n");
+}
+
+/**
+ * Send the full chat history + new user message to the AI so it has
+ * complete conversational context.
+ */
+const generateAIResponse = async (
+  prompt: string,
+  groupId: string,
+) => {
   const openai = new OpenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+  // Fetch group metadata for the system prompt
+  let locationName: string | undefined;
+  let activity: string | undefined;
+  try {
+    const group = await Group.findById(groupId).lean() as any;
+    if (group) {
+      locationName = group.locationName || undefined;
+      activity = group.activity || undefined;
+    }
+  } catch { /* non-critical */ }
+
+  // Fetch full chat history for this group (oldest → newest)
+  const history = await Message.find({ groupId })
+    .sort({ createdAt: 1 })
+    .lean() as any[];
+
+  // Map stored messages to the OpenAI messages format
+  const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: buildSystemPrompt(locationName, activity) },
+  ];
+
+  for (const msg of history) {
+    const role = msg.isAI ? "assistant" as const : "user" as const;
+    const name = msg.senderName ?? (msg.isAI ? "Gemini" : "User");
+    chatMessages.push({
+      role,
+      content: msg.isAI ? msg.text : `[${name}]: ${msg.text}`,
+    });
+  }
+
+  // Append the brand-new user prompt (it was already saved to DB, but
+  // the query above may not include it yet depending on timing)
+  const lastInHistory = history[history.length - 1];
+  const alreadyIncluded =
+    lastInHistory && lastInHistory.text === prompt && !lastInHistory.isAI;
+  if (!alreadyIncluded) {
+    chatMessages.push({ role: "user", content: prompt });
+  }
 
   const completion = await openai.chat.completions.create({
     model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: prompt },
-    ],
+    messages: chatMessages,
     temperature: 0.6,
     max_tokens: 300,
   });
@@ -64,7 +135,7 @@ export async function POST(req: Request) {
     let aiText = "Gemini isn't configured yet. Add GEMINI_API_KEY to enable AI replies.";
     if (apiKey) {
       try {
-        aiText = await generateAIResponse(text);
+        aiText = await generateAIResponse(text, groupId);
       } catch (aiErr: any) {
         console.error("AI error:", aiErr?.message ?? aiErr);
         aiText = "Sorry, I couldn't reach Gemini right now. Please try again in a moment.";
