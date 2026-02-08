@@ -19,6 +19,8 @@ export function useSwipe(goal?: string) {
   const [liked, setLiked] = useState<LocationCard[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const fetchedRef = useRef(false);
+  // Track IDs swiped during this session so they stay hidden across category changes
+  const [swipedSessionIds, setSwipedSessionIds] = useState<Set<string>>(new Set());
 
   /* ---- read userId from localStorage ---- */
   useEffect(() => {
@@ -85,23 +87,27 @@ export function useSwipe(goal?: string) {
 
   useEffect(() => {
     const normalizedGoal = goal?.toLowerCase().trim();
+
+    // Start from all locations, then remove anything swiped this session
+    const unswiped = allLocations.filter((loc) => !swipedSessionIds.has(loc.id));
+
     if (!normalizedGoal) {
-      setLocations(allLocations);
+      setLocations(unswiped);
       setIndex(0);
       return;
     }
     const allowed = GOAL_TYPE_MAP[normalizedGoal] ?? [];
     if (allowed.length === 0) {
-      setLocations(allLocations);
+      setLocations(unswiped);
       setIndex(0);
       return;
     }
-    const filtered = allLocations.filter((loc) =>
+    const filtered = unswiped.filter((loc) =>
       allowed.includes((loc.type ?? '').toLowerCase())
     );
     setLocations(filtered);
     setIndex(0);
-  }, [allLocations, goal]);
+  }, [allLocations, goal, swipedSessionIds]);
 
   const currentLocation = locations[index] ?? null;
   const hasMore = index < locations.length;
@@ -117,6 +123,13 @@ export function useSwipe(goal?: string) {
       if (decision === 'like' && loc) {
         setLiked(prev => [...prev, loc]);
       }
+
+      // Mark this location as swiped for the current session
+      setSwipedSessionIds(prev => {
+        const next = new Set(prev);
+        next.add(locationId);
+        return next;
+      });
 
       // Persist the swipe to the backend (only if authenticated)
       if (userId) {

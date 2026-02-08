@@ -12,6 +12,7 @@ type GroupMember = {
 type GroupSummary = {
   id: string;
   activity: string;
+  locationName: string;
   createdAt: string;
   members: GroupMember[];
   lastMessage: string;
@@ -110,6 +111,7 @@ export default function ChatLandingPage() {
         const mapped: GroupSummary[] = (data ?? []).map((group: any) => ({
           id: group.id ?? group._id,
           activity: group.activity ?? 'Group',
+          locationName: group.locationName ?? '',
           createdAt: group.createdAt ?? new Date().toISOString(),
           members: group.members ?? [],
           lastMessage: group.lastMessage ?? '',
@@ -190,9 +192,10 @@ export default function ChatLandingPage() {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return groups;
     return groups.filter((group) => {
+      const name = (group.locationName || group.activity)?.toLowerCase() ?? '';
       const activity = group.activity?.toLowerCase() ?? '';
       const memberNames = group.members.map((member) => member.name?.toLowerCase() ?? '').join(' ');
-      return activity.includes(term) || memberNames.includes(term);
+      return name.includes(term) || activity.includes(term) || memberNames.includes(term);
     });
   }, [groups, searchTerm]);
 
@@ -286,34 +289,10 @@ export default function ChatLandingPage() {
     <div className="min-h-[calc(100vh-var(--toolbar-clearance,0px))] bg-[var(--background)] text-[var(--foreground)]">
       <div className="relative min-h-[calc(100vh-var(--toolbar-clearance,0px))]">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(5,102,97,0.12),_transparent_55%),_radial-gradient(circle_at_20%_20%,_rgba(13,84,80,0.10),_transparent_60%)]" />
-        <div className="mx-auto flex min-h-[calc(85vh-var(--toolbar-clearance,0px))] max-h-[85vh] max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8 overflow-hidden">
-          <header className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 px-6 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="VanConnect" className="h-11 w-auto" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
-                  VanConnect Chats
-                </p>
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  Keep your groups moving together
-                </h1>
-                <p className="text-sm text-[var(--muted)]">
-                  Coordinate study sessions, rides, and eco-friendly adventures.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--foreground)] shadow-sm">
-                New group
-              </button>
-              <button className="rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm">
-                Start chat
-              </button>
-            </div>
-          </header>
+        <div className="mx-auto flex min-h-[calc(100vh-var(--toolbar-clearance,0px))] max-h-[100vh] max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8 overflow-hidden">
 
           <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[340px_1fr] min-h-0">
-            <section className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm min-h-0 max-h-[calc(100vh-220px)] overflow-hidden">
+            <section className="flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm min-h-0 max-h-[calc(100vh-120px)] overflow-hidden">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">Your groups</h2>
@@ -347,7 +326,7 @@ export default function ChatLandingPage() {
                 ) : (
                   filteredGroups.map((group, index) => {
                     const isActive = group.id === activeId;
-                    const groupName = toTitle(group.activity || 'Group');
+                    const groupName = toTitle(group.locationName || group.activity || 'Group');
                     const members = group.members ?? [];
                     const avatarStyle = AVATAR_STYLES[index % AVATAR_STYLES.length];
 
@@ -358,7 +337,7 @@ export default function ChatLandingPage() {
                         className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3 text-left transition ${
                           isActive
                             ? 'border-[var(--primary)]/40 bg-[var(--primary)]/10'
-                            : 'border-[var(--border)] bg-white hover:border-[var(--primary)]/30'
+                            : 'border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)]/30'
                         }`}
                       >
                         <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold ${avatarStyle}`}>
@@ -380,7 +359,7 @@ export default function ChatLandingPage() {
                                   key={`${group.id}-${member.id}`}
                                   className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold ${
                                     isActive
-                                      ? 'border-[var(--primary)]/30 bg-white text-[var(--primary)]'
+                                      ? 'border-[var(--primary)]/30 bg-[var(--background)] text-[var(--primary)]'
                                       : 'border-[var(--border)] bg-[var(--background)] text-[var(--muted)]'
                                   }`}
                                 >
@@ -403,14 +382,14 @@ export default function ChatLandingPage() {
               </div>
             </section>
 
-            <section className="flex min-h-0 max-h-[calc(100vh-220px)] flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
+            <section className="flex min-h-0 max-h-[calc(100vh-120px)] flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] px-6 py-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
                     {activeGroup?.activity ?? 'Group chat'}
                   </p>
                   <h2 className="text-2xl font-semibold">
-                    {activeGroup ? toTitle(activeGroup.activity) : 'Select a group'}
+                    {activeGroup ? toTitle(activeGroup.locationName || activeGroup.activity) : 'Select a group'}
                   </h2>
                   <p className="text-sm text-[var(--muted)]">
                     {activeGroup ? `${activeGroup.members.length} members` : 'Choose a group to see messages.'}
@@ -419,7 +398,7 @@ export default function ChatLandingPage() {
                 <div className="flex items-center gap-3">
                   <Link
                     href={activeGroup ? `/chat?groupId=${activeGroup.id}` : '/chat'}
-                    className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--foreground)]"
+                    className="rounded-full border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-xs font-semibold text-[var(--foreground)]"
                   >
                     Open thread
                   </Link>

@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Preference from "@/models/Preference";
 import Group from "@/models/Group";
+import Swipe from "@/models/Swipe";
+import Location from "@/models/Location";
 
 export async function POST(req: Request) {
   try {
@@ -19,6 +21,20 @@ export async function POST(req: Request) {
     const myPref = await Preference.findOne({ userId });
     if (!myPref) {
       return NextResponse.json({ error: "Preferences not found" }, { status: 400 });
+    }
+
+    // Find the user's most recently liked location so we can name the group after it
+    const lastLikedSwipe = await Swipe.findOne({ userId, liked: true }).sort({ createdAt: -1 });
+    let likedLocationName = "";
+    let likedLocationId = "";
+    let likedLocationImage = "";
+    if (lastLikedSwipe?.locationId) {
+      const loc = await Location.findById(lastLikedSwipe.locationId);
+      if (loc) {
+        likedLocationName = loc.name ?? "";
+        likedLocationId = String(loc._id);
+        likedLocationImage = Array.isArray(loc.images) && loc.images.length > 0 ? loc.images[0] : "";
+      }
     }
 
     const availabilityDays = Array.isArray(myPref.availabilityDays)
@@ -89,6 +105,13 @@ export async function POST(req: Request) {
         openGroup.status = "confirmed";
         updated = true;
       }
+      // Populate location info if the group doesn't have one yet
+      if (!openGroup.locationName && likedLocationName) {
+        openGroup.locationName = likedLocationName;
+        openGroup.locationId = likedLocationId;
+        openGroup.locationImage = likedLocationImage;
+        updated = true;
+      }
       if (updated) {
         await openGroup.save();
       }
@@ -107,6 +130,9 @@ export async function POST(req: Request) {
       vibe: myPref.vibe,
       availabilityDays,
       availabilityTimes,
+      locationId: likedLocationId || undefined,
+      locationName: likedLocationName || undefined,
+      locationImage: likedLocationImage || undefined,
       status: "forming",
     });
 

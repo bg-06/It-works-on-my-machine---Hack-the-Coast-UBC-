@@ -108,22 +108,75 @@ export default function SwipePage() {
   /* ---- Done / empty ---- */
   if (!hasMore) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--background)] p-4">
-        <div className="max-w-md w-full bg-[var(--card)] rounded-2xl shadow-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-            {liked.length > 0 ? `You liked ${liked.length} spot${liked.length > 1 ? 's' : ''}!` : 'No locations yet'}
-          </h2>
-          <p className="text-[var(--muted)] mb-6">
-            {liked.length > 0
-              ? "We'll match you with others who liked the same places."
-              : 'Check back later — new spots are added all the time.'}
-          </p>
-          <button
-            onClick={() => router.push('/')}
-            className="bg-[var(--primary)] text-white font-semibold py-3 px-6 rounded-lg hover:bg-[var(--primary-hover)] transition"
-          >
-            Back to Home
-          </button>
+      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+        <div className="mx-auto max-w-6xl px-6 py-10">
+          {/* Nav */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+            <div className="flex items-center gap-3 justify-self-start">
+              <img src="/logo.png" alt="VanConnect" className="h-8 w-auto" />
+              <span className="text-lg font-semibold text-[var(--foreground)]">VanConnect</span>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight justify-self-center text-center">
+              Discover Spots
+            </h1>
+            <button
+              onClick={toggleTheme}
+              className="flex h-9 w-9 items-center justify-center justify-self-end rounded-full border border-[var(--border)] bg-white/70 text-[var(--foreground)] shadow-sm hover:bg-[var(--background)]"
+              aria-label="Toggle light and dark mode"
+            >
+              {theme === 'dark' ? (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364-1.414 1.414M7.05 16.95l-1.414 1.414m0-11.314L7.05 7.05m9.9 9.9 1.414 1.414" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Category filter buttons */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {['hiking', 'photography', 'social', 'study', 'fitness'].map((goal) => {
+              const active = selectedGoal === goal;
+              return (
+                <button
+                  key={goal}
+                  type="button"
+                  onClick={() => setSelectedGoal(goal)}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                    active
+                      ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                      : 'border-[var(--border)] bg-[var(--card)] text-[var(--muted)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  {goal}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Empty state message */}
+          <div className="mt-6 flex min-h-[70vh] items-center justify-center">
+            <div className="max-w-md w-full bg-[var(--card)] rounded-2xl shadow-lg p-8 text-center">
+              <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
+                {liked.length > 0 ? `You liked ${liked.length} spot${liked.length > 1 ? 's' : ''}!` : `No more ${selectedGoal} spots`}
+              </h2>
+              <p className="text-[var(--muted)] mb-6">
+                {liked.length > 0
+                  ? "We'll match you with others who liked the same places."
+                  : 'Try switching to a different category or check back later.'}
+              </p>
+              <button
+                onClick={() => router.push('/')}
+                className="bg-[var(--primary)] text-white font-semibold py-3 px-6 rounded-lg hover:bg-[var(--primary-hover)] transition"
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
