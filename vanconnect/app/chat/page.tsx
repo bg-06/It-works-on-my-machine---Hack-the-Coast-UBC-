@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type GroupMember = {
   id: string;
@@ -47,11 +48,25 @@ const toTitle = (value: string) =>
     .join(' ');
 
 export default function ChatLandingPage() {
+  const router = useRouter();
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+
+  // Auth guard – redirect if not logged in
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('vc_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const id = parsed.userId ?? parsed._id ?? parsed.id;
+        if (id) return; // authenticated
+      }
+    } catch {}
+    router.replace('/');
+  }, [router]);
 
   useEffect(() => {
     const loadGroups = async () => {
@@ -151,13 +166,16 @@ export default function ChatLandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(64,145,108,0.18),_transparent_55%),_radial-gradient(circle_at_20%_20%,_rgba(231,111,81,0.12),_transparent_55%)]" />
         <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6 sm:px-8">
           <header className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-[var(--chat-forest)] opacity-70">
-                VanConnect Chats
-              </p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Your groups, all in one feed
-              </h1>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="VanConnect" className="h-10 w-auto" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-[var(--chat-forest)] opacity-70">
+                  VanConnect Chats
+                </p>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  Your groups, all in one feed
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <button className="rounded-full border border-[var(--chat-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--chat-forest)] shadow-sm backdrop-blur">

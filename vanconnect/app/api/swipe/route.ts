@@ -29,6 +29,13 @@ export async function POST(req: Request) {
     await connectDB();
     const body = await req.json();
 
+    if (!body.userId || !body.locationId) {
+      return NextResponse.json(
+        { error: "userId and locationId are required" },
+        { status: 400 },
+      );
+    }
+
     const swipe = await Swipe.create({
       userId: body.userId,
       locationId: body.locationId,

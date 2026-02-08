@@ -25,6 +25,8 @@ export function useSwipe() {
   /* ---- fetch all locations, filter out already-swiped ---- */
   useEffect(() => {
     if (fetchedRef.current) return;
+    // Don't fetch until we have a userId
+    if (!userId) return;
     fetchedRef.current = true;
 
     const fetchFeed = async () => {
@@ -35,23 +37,11 @@ export function useSwipe() {
 
         // 2. Get already-swiped locationIds for this user
         let swipedIds: string[] = [];
-        const uid = userId ?? (() => {
-          try {
-            const raw = localStorage.getItem('vc_user');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              return parsed.userId ?? parsed._id ?? parsed.id ?? null;
-            }
-          } catch {}
-          return null;
-        })();
 
-        if (uid) {
-          const swipeRes = await fetch(`/api/swipe?userId=${uid}`);
-          if (swipeRes.ok) {
-            const data = await swipeRes.json();
-            swipedIds = data.swipedLocationIds ?? [];
-          }
+        const swipeRes = await fetch(`/api/swipe?userId=${userId}`);
+        if (swipeRes.ok) {
+          const data = await swipeRes.json();
+          swipedIds = data.swipedLocationIds ?? [];
         }
 
         // 3. Filter out already-swiped locations
@@ -95,25 +85,14 @@ export function useSwipe() {
         setLiked(prev => [...prev, loc]);
       }
 
-      // Persist the swipe to the backend
-      const uid = userId ?? (() => {
-        try {
-          const raw = localStorage.getItem('vc_user');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            return parsed.userId ?? parsed._id ?? parsed.id ?? null;
-          }
-        } catch {}
-        return null;
-      })();
-
-      if (uid) {
+      // Persist the swipe to the backend (only if authenticated)
+      if (userId) {
         try {
           await fetch('/api/swipe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: uid,
+              userId,
               locationId,
               liked: decision === 'like',
             }),

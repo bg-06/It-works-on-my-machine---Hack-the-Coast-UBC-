@@ -67,14 +67,24 @@ const ENERGY_LABELS = [
 export default function OnboardingPage() {
   const router = useRouter();
 
-  // Read user from localStorage (set at login/register)
+  // Auth guard – redirect to login if not authenticated
   const [vcUser, setVcUser] = useState<{ userId?: string; name?: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
     try {
       const raw = localStorage.getItem('vc_user');
-      if (raw) setVcUser(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const id = parsed.userId ?? parsed._id ?? parsed.id;
+        if (id) {
+          setVcUser(parsed);
+          setAuthChecked(true);
+          return;
+        }
+      }
     } catch {}
-  }, []);
+    router.replace('/');
+  }, [router]);
   const userName = vcUser?.name ?? '';
   const userPhoto = '';
 
@@ -151,16 +161,20 @@ export default function OnboardingPage() {
   /* ================================================================ */
   /*  Render                                                          */
   /* ================================================================ */
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+        <div className="text-2xl text-[var(--muted)]">Loading…</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex flex-col">
       {/* -------- Top Nav -------- */}
       <header className="flex items-center justify-between px-6 md:px-10 py-4 bg-[rgb(12,18,16)]">
         <div className="flex items-center gap-3">
-          {/* Maple-leaf icon */}
-          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M17,8 C8,10 5.9,16.17 3.82,21.34 L5.71,22 L6.66,19.7 C7.14,19.87 7.64,20 8,20 C19,20 22,3 22,3 C21,5 14,5.25 9,6.25 C4,7.25 2,11.5 2,13.5 C2,15.5 3.75,17.25 3.75,17.25 C7,8 17,8 17,8 Z" />
-          </svg>
-          <span className="text-xl font-bold tracking-tight text-white">VanConnect</span>
+          <img src="/logo.png" alt="VanConnect" className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-4">
           <button

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSwipe } from '@/hooks/useSwipe';
+import { useAuth } from '@/hooks/useAuth';
 
 /* helper: render sustainability dots (out of 10) */
 function SustainabilityBadge({ score }: { score: number }) {
@@ -36,6 +37,7 @@ const TYPE_EMOJI: Record<string, string> = {
 
 export default function SwipePage() {
   const router = useRouter();
+  const { checking } = useAuth();
   const { currentLocation, hasMore, loading, swipe, liked } = useSwipe();
   const [swiping, setSwiping] = useState(false);
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
@@ -54,7 +56,7 @@ export default function SwipePage() {
   };
 
   /* ---- Loading ---- */
-  if (loading) {
+  if (checking || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
         <div className="text-2xl text-[var(--muted)]">Loading locations…</div>
@@ -95,14 +97,17 @@ export default function SwipePage() {
       <div className="max-w-md mx-auto py-8">
         {/* Nav */}
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => router.push('/')}
-            className="text-white/70 hover:text-white transition"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="text-white/70 hover:text-white transition"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <img src="/logo.png" alt="VanConnect" className="h-8 w-auto" />
+          </div>
           <h1 className="text-3xl font-bold text-white text-center">Discover Spots</h1>
           <div className="w-6" />
         </div>
